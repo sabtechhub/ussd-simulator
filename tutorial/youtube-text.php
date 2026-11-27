@@ -20,7 +20,11 @@ foreach (glob("$dir/*.mp4") as $mp4) {
     $script = __DIR__ . "/videos/$name.js";
     if (!is_file($script)) continue;
     $js = file_get_contents($script);
-    if (!preg_match("/L\\.intro\\(\\s*(\\d+)\\s*,\\s*'((?:[^'\\\\]|\\\\.)*)'\\s*,\\s*'((?:[^'\\\\]|\\\\.)*)'/", $js, $m)) continue;
+    if (!preg_match("/L\\.intro\\(\\s*(\\d+)\\s*,\\s*'((?:[^'\\\\]|\\\\.)*)'\\s*,\\s*'((?:[^'\\\\]|\\\\.)*)'/", $js, $m)) {
+        // the bonus video opens with its own card: T.titleOn('Bonus video', 'Title', 'About', ...)
+        if (!preg_match("/T\\.titleOn\\('Bonus video',\\s*'((?:[^'\\\\]|\\\\.)*)'\\s*,\\s*'((?:[^'\\\\]|\\\\.)*)'/", $js, $b)) continue;
+        $m = [0, 'bonus', $b[1], $b[2]];
+    }
     [$_, $n, $title, $about] = $m;
     $title = stripslashes($title); $about = stripslashes($about);
     $small = ['a', 'an', 'and', 'the', 'or', 'of', 'to', 'in', 'on', 'with', 'for'];
@@ -36,10 +40,11 @@ foreach (glob("$dir/*.mp4") as $mp4) {
     }
     $mins = round(((float)($info['format']['duration'] ?? 0)) / 60, 1);
 
-    $ytTitle = "$series (Part $n of 12): $title | SAB-TECH HUB";
+    $bonus = $n === 'bonus';
+    $ytTitle = $bonus ? "$series (Bonus): $title | SAB-TECH HUB" : "$series (Part $n of 12): $title | SAB-TECH HUB";
     if (mb_strlen($ytTitle) > 100) $ytTitle = "$series #$n: $title";
     $desc = "$about\n\n"
-        . "Part $n of 12 in our free beginner course: $series (also called a short code), with the free SAB-TECH HUB USSD Simulator. "
+        . ($bonus ? 'Bonus video in' : "Part $n of 12 in") . " our free beginner course: $series (also called a short code), with the free SAB-TECH HUB USSD Simulator. "
         . "Build your menu on the Map with no code, test it on a pretend phone, then copy the code onto your server and connect Hubtel, Nalo, Orchard, Arkesel or any USSD provider.\n\n"
         . "Try the simulator free: $site\nDownload it (free, open source): $github\n\n"
         . "Chapters:\n" . implode("\n", array_map(fn($c) => ts($c[0]) . ' ' . $c[1], $chap)) . "\n\n"
