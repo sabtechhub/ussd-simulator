@@ -21,16 +21,35 @@
     number: { label: 'A number',            msg: 'Please enter a valid number.' },
     pin:    { label: '4-digit PIN',         msg: 'Please enter 4 digits.' },
     phone:  { label: 'Phone number',        msg: 'Please enter a valid phone number.' },
+    email:  { label: 'Email address',       msg: 'Please enter a valid email address.' },
+    text:   { label: 'Text (no digits)',    msg: 'Please enter text without numbers.' },
   };
+  // [key, label shown to the user, group, needs no value]
   const OPS = [
-    ['=', 'equals'], ['!=', 'not equal'], ['>', 'greater than'], ['<', 'less than'],
-    ['>=', 'at least'], ['<=', 'at most'], ['contains', 'contains'],
+    ['=', 'equals', 'Compare'], ['!=', 'not equal', 'Compare'],
+    ['>', 'greater than', 'Compare'], ['<', 'less than', 'Compare'],
+    ['>=', 'at least (≥)', 'Compare'], ['<=', 'at most (≤)', 'Compare'],
+    ['between', 'is between', 'Compare'], ['one_of', 'is one of', 'Compare'], ['not_one_of', 'is not one of', 'Compare'],
+    ['contains', 'contains', 'Text'], ['not_contains', 'does not contain', 'Text'],
+    ['starts', 'starts with', 'Text'], ['ends', 'ends with', 'Text'],
+    ['is_number', 'is a number', 'Type', true], ['is_int', 'is a whole number', 'Type', true],
+    ['is_text', 'is text (not a number)', 'Type', true], ['is_email', 'is an email', 'Type', true],
+    ['is_phone', 'is a phone number', 'Type', true],
+    ['is_empty', 'is empty', 'Type', true], ['not_empty', 'is not empty', 'Type', true],
+    ['len_eq', 'length is', 'Length'], ['len_gte', 'length at least', 'Length'], ['len_lte', 'length at most', 'Length'],
   ];
+  const OP_HINT = { between: 'e.g. 1,100', one_of: 'e.g. 1,2,3', not_one_of: 'e.g. 0,9', len_eq: 'e.g. 4', len_gte: 'e.g. 3', len_lte: 'e.g. 10' };
+  const isUnary = op => !!(OPS.find(x => x[0] === op) || [])[3];
+  const opLabel = op => (OPS.find(x => x[0] === op) || ['', op])[1];
+  const RX = { number: /^-?\d+(\.\d+)?$/, int: /^-?\d+$/, email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, phone: /^(\+?233|0)\d{9}$/ };
+  const listOf = v => String(v).split(',').map(x => x.trim()).filter(x => x !== '');
+  // conditions whose value may contain {{name}}, e.g. "to equals {{phone}}"
+  const VALUE_FILL = OPS.filter(x => !x[3]).map(x => x[0]);   // every check that takes a value
 
   /** A new menu: one empty start screen. */
   function blankFlow() {
     return { name: "", start: "main", screens: [
-      { id: "main", type: "menu", text: "", saveAs: "", options: [{ key: "1", label: "", next: "" }], rules: [], validate: "any", error: "", next: "" },
+      { id: "main", type: "menu", text: "", saveAs: "", options: [{ key: "1", label: "", next: "" }], rules: [], validate: "any", error: "", next: "", sets: [] },
     ] };
   }
   /** Menus saved by an older version that only held the built-in vote example are replaced by a blank menu. */
@@ -42,9 +61,26 @@
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
   function load() {
     try { const f = JSON.parse(localStorage.getItem(STORE_KEY)); if (valid(f) && !isOldExample(f)) return normalize(f); } catch (e) {}
-    return blankFlow();
+    return normalize(blankFlow());
   }
-  function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(flow)); } catch (e) {} }
+  let lastSaved = null;
+  /** Keeps the menu in this browser. Returns false if the browser refused (private mode, storage full). */
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(flow)); lastSaved = new Date(); showSaveState('saved'); return true; }
+    catch (e) { showSaveState('error'); return false; }
+  }
+  function showSaveState(state) {
+    const el2 = document.getElementById('saveState'); if (!el2) return;
+    el2.className = 'save-state ' + state;
+    el2.textContent = state === 'saving' ? 'Saving…' : state === 'error' ? 'Not saved: this browser blocked storage'
+      : 'Saved' + (lastSaved ? ' ' + lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
+  }
+  /** The Save button and Ctrl+S. */
+  function saveNow() {
+    clearTimeout(saveTimer);
+    if (save()) window.toast && window.toast('Menu saved in this browser. Use File → Save to file to keep a copy.', 'save');
+    else window.tell && window.tell({ title: "Couldn't save", message: 'This browser is blocking storage (for example a private window). Use File → Save to file to keep your menu.' });
+  }
   function valid(f) { return f && Array.isArray(f.screens) && f.screens.length > 0; }
   function normalize(f) {
     f.name = typeof f.name === 'string' ? f.name : '';
@@ -130,6 +166,22 @@
       case '>': return x > y; case '<': return x < y;
       case '>=': return x >= y; case '<=': return x <= y;
       case 'contains': return a.indexOf(b) !== -1;
+      case 'not_contains': return a.indexOf(b) === -1;
+      case 'starts': return a.startsWith(b);
+      case 'ends': return a.endsWith(b);
+      case 'between': { const [lo, hi] = String(b).split(',').map(x => parseFloat(x) || 0); return isNum(a) && parseFloat(a) >= (lo || 0) && parseFloat(a) <= (hi || 0); }
+      case 'one_of': return listOf(b).includes(a);
+      case 'not_one_of': return !listOf(b).includes(a);
+      case 'is_number': return RX.number.test(a);
+      case 'is_int': return RX.int.test(a);
+      case 'is_text': return a !== '' && !RX.number.test(a);
+      case 'is_email': return RX.email.test(a);
+      case 'is_phone': return RX.phone.test(a);
+      case 'is_empty': return a.trim() === '';
+      case 'not_empty': return a.trim() !== '';
+      case 'len_eq': return [...a].length === (parseInt(b, 10) || 0);
+      case 'len_gte': return [...a].length >= (parseInt(b, 10) || 0);
+      case 'len_lte': return [...a].length <= (parseInt(b, 10) || 0);
     }
     return false;
   }
@@ -137,7 +189,9 @@
     switch (rule) {
       case 'number': return isNum(v) && /^-?\d+(\.\d+)?$/.test(v);
       case 'pin': return /^\d{4}$/.test(v);
-      case 'phone': return /^(0|233)\d{9}$/.test(v);
+      case 'phone': return RX.phone.test(v);
+      case 'email': return RX.email.test(v);
+      case 'text': return v !== '' && !/\d/.test(v);
       default: return v !== '';
     }
   }
@@ -171,7 +225,8 @@
     if (!validInput(cur.validate, input)) return show(cur.id, cur.error || VALIDATE[cur.validate].msg);
     st.v[inputVar(cur)] = input;
     for (const r of cur.rules) {
-      if (r.next && compare(st.v[r.var || inputVar(cur)], r.op, r.value)) return show(r.next);
+      const val = VALUE_FILL.includes(r.op) ? fill(String(r.value ?? ''), st.v) : r.value;
+      if (r.next && compare(st.v[r.var || inputVar(cur)], r.op, val)) return show(r.next);
     }
     return show(cur.next);
   }
@@ -203,7 +258,45 @@
   function phpVal(v) { return isNum(v) && /^-?\d+(\.\d+)?$/.test(String(v)) ? String(v) : phpStr(v); }
   function phpCond(varName, op, value) {
     const a = `$vars[${phpStr(varName)}] ?? ''`;
-    if (op === 'contains') return `strpos((string)(${a}), ${phpStr(value)}) !== false`;
+    const s = `(string)(${a})`, v = String(value ?? '');
+    if (VALUE_FILL.includes(op) && /\{\{\s*\w+\s*\}\}/.test(v)) {   // value uses {{name}}: compare with the filled-in text
+      const f = `fill(${phpStr(v)})`;
+      switch (op) {
+        case 'contains': return `strpos(${s}, ${f}) !== false`;
+        case 'not_contains': return `strpos(${s}, ${f}) === false`;
+        case 'starts': return `strncmp(${s}, ${f}, strlen(${f})) === 0`;
+        case 'ends': return `(${f} === '' || substr(${s}, -strlen(${f})) === ${f})`;
+        case 'between': return `is_numeric(${s}) && (float)${s} >= (float)(explode(',', ${f})[0]) && (float)${s} <= (float)(explode(',', ${f})[1] ?? 0)`;
+        case 'one_of': return `in_array(${s}, array_filter(array_map('trim', explode(',', ${f})), 'strlen'), true)`;
+        case 'not_one_of': return `!in_array(${s}, array_filter(array_map('trim', explode(',', ${f})), 'strlen'), true)`;
+        case 'len_eq': return `preg_match_all('/./us', ${s}) === (int)${f}`;
+        case 'len_gte': return `preg_match_all('/./us', ${s}) >= (int)${f}`;
+        case 'len_lte': return `preg_match_all('/./us', ${s}) <= (int)${f}`;
+        default: return `(${a}) ${op === '=' ? '==' : op} ${f}`;
+      }
+    }
+    const list = '[' + listOf(v).map(phpStr).join(', ') + ']';
+    const n = parseInt(v, 10) || 0;
+    const len = `preg_match_all('/./us', ${s})`;   // number of characters
+    switch (op) {
+      case 'contains': return `strpos(${s}, ${phpStr(v)}) !== false`;
+      case 'not_contains': return `strpos(${s}, ${phpStr(v)}) === false`;
+      case 'starts': return v === '' ? 'true' : `strncmp(${s}, ${phpStr(v)}, ${phpStr(v)} === '' ? 0 : strlen(${phpStr(v)})) === 0`;
+      case 'ends': return v === '' ? 'true' : `substr(${s}, -strlen(${phpStr(v)})) === ${phpStr(v)}`;
+      case 'between': { const [lo, hi] = v.split(',').map(x => parseFloat(x) || 0); return `is_numeric(${s}) && (float)${s} >= ${lo || 0} && (float)${s} <= ${hi || 0}`; }
+      case 'one_of': return `in_array(${s}, ${list}, true)`;
+      case 'not_one_of': return `!in_array(${s}, ${list}, true)`;
+      case 'is_number': return `preg_match('/^-?\\d+(\\.\\d+)?$/', ${s})`;
+      case 'is_int': return `preg_match('/^-?\\d+$/', ${s})`;
+      case 'is_text': return `${s} !== '' && !preg_match('/^-?\\d+(\\.\\d+)?$/', ${s})`;
+      case 'is_email': return `preg_match('/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/', ${s})`;
+      case 'is_phone': return `preg_match('/^(\\+?233|0)\\d{9}$/', ${s})`;
+      case 'is_empty': return `trim(${s}) === ''`;
+      case 'not_empty': return `trim(${s}) !== ''`;
+      case 'len_eq': return `${len} === ${n}`;
+      case 'len_gte': return `${len} >= ${n}`;
+      case 'len_lte': return `${len} <= ${n}`;
+    }
     const phpOp = op === '=' ? '==' : op;
     return `(${a}) ${phpOp} ${phpVal(value)}`;
   }
@@ -211,7 +304,9 @@
     switch (rule) {
       case 'number': return `!preg_match('/^-?\\d+(\\.\\d+)?$/', $input)`;
       case 'pin': return `!preg_match('/^\\d{4}$/', $input)`;
-      case 'phone': return `!preg_match('/^(0|233)\\d{9}$/', $input)`;
+      case 'phone': return `!preg_match('/^(\\+?233|0)\\d{9}$/', $input)`;
+      case 'email': return `!preg_match('/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/', $input)`;
+      case 'text': return `$input === '' || preg_match('/\\d/', $input)`;
       default: return `$input === ''`;
     }
   }
@@ -419,7 +514,7 @@
   }
   let saveTimer;
   function changed(rerender) {
-    clearTimeout(saveTimer); saveTimer = setTimeout(save, 250);
+    clearTimeout(saveTimer); showSaveState('saving'); saveTimer = setTimeout(save, 400);
     if (rerender) render();
   }
   /** How a screen is named in the "goes to" lists: name plus the start of its message. */
@@ -433,7 +528,7 @@
     const s = el('select', { class: 'nx', title: 'The screen the user sees next', onchange: e => {
       if (e.target.value !== '__new__') return onchange(e.target.value);
       const id = uniqueId('new_screen');
-      flow.screens.push({ id, type: 'end', text: '', saveAs: '', options: [], rules: [], validate: 'any', error: '', next: '' });
+      flow.screens.push({ id, type: 'end', text: '', saveAs: '', options: [], rules: [], validate: 'any', error: '', next: '', sets: [] });
       onchange(id);
       changed(true);
       const card = document.querySelector(`.scr[data-id="${id}"]`);
@@ -544,12 +639,14 @@
         el('input', { value: s.error, placeholder: VALIDATE[s.validate].msg, oninput: e => { s.error = e.target.value; changed(false); } }));
       more.append(el('label', {}, 'Go somewhere else when… (checked in order)'));
       s.rules.forEach((r, ri) => {
-        const opSel = el('select', { onchange: e => { r.op = e.target.value; changed(false); } }, OPS.map(([k, t]) => el('option', { value: k }, t)));
+        const groups = [...new Set(OPS.map(x => x[2]))];
+        const opSel = el('select', { title: 'How to check the value', onchange: e => { r.op = e.target.value; changed(true); } },
+          groups.map(g => el('optgroup', { label: g }, OPS.filter(x => x[2] === g).map(([k, t]) => el('option', { value: k }, t)))));
         opSel.value = r.op || '=';
         more.append(el('div', { class: 'grid-row rule-row' },
           varInput(r.var || v, x => { r.var = x; changed(false); }),
           opSel,
-          el('input', { value: r.value, placeholder: 'value', oninput: e => { r.value = e.target.value; changed(false); } }),
+          el('input', { value: r.value, placeholder: OP_HINT[r.op] || 'value or {{name}}', list: 'bValVars', class: isUnary(r.op) ? 'no-value' : '', title: isUnary(r.op) ? 'Not needed for this check' : 'Type a value, or pick a saved value like {{amount}} to compare with' + (OP_HINT[r.op] ? ' (separate values with commas)' : ''), disabled: isUnary(r.op), oninput: e => { r.value = e.target.value; changed(false); } }),
           el('span', { class: 'arrow' }, '→'),
           screenSelect(r.next, x => { r.next = x; changed(false); }),
           el('button', { class: 'btn icon', title: 'Remove condition', onclick: () => { s.rules.splice(ri, 1); changed(true); } }, iconEl('x'))));
@@ -558,7 +655,7 @@
     }
     more.append(el('label', {}, 'Set values when this screen opens'),
       el('div', { class: 'set-help' }, 'Show them later with {{name}}. Start a value with = to calculate, e.g. ={{price}} * {{qty}}'));
-    s.sets.forEach((x, xi) => {
+    (s.sets = s.sets || []).forEach((x, xi) => {
       more.append(el('div', { class: 'grid-row set-row' },
         varInput(x.name, v => { x.name = v; changed(true); }, 'name'),
         el('span', { class: 'arrow' }, '='),
@@ -618,7 +715,7 @@
   function links(s) {
     if (s.type === 'menu') return s.options.map(o => ({ label: `${o.key}. ${o.label || '…'}`, to: o.next, set: v => { o.next = v; } }));
     if (s.type === 'input') return [
-      ...s.rules.map(r => ({ label: `if ${r.var || inputVar(s)} ${(OPS.find(x => x[0] === r.op) || ['', r.op])[1]} ${r.value}`, to: r.next, set: v => { r.next = v; }, rule: true })),
+      ...s.rules.map(r => ({ label: `if ${r.var || inputVar(s)} ${opLabel(r.op)}${isUnary(r.op) ? '' : ' ' + r.value}`, to: r.next, set: v => { r.next = v; }, rule: true })),
       { label: s.rules.length ? 'otherwise' : 'then', to: s.next, set: v => { s.next = v; } },
     ];
     return [];
@@ -802,7 +899,7 @@
       if (n) return;                                           // dropped on its own box: no change
       // dropped on empty space: make a new screen there and link to it
       const p = pos(ev), id = uniqueId('new_screen');
-      flow.screens.push({ id, type: 'end', text: '', saveAs: '', options: [], rules: [], validate: 'any', error: '', next: '', x: Math.max(0, Math.round(p.x - 20)), y: Math.max(0, Math.round(p.y - 20)) });
+      flow.screens.push({ id, type: 'end', text: '', saveAs: '', options: [], rules: [], validate: 'any', error: '', next: '', sets: [], x: Math.max(0, Math.round(p.x - 20)), y: Math.max(0, Math.round(p.y - 20)) });
       link.set(id);
       changed(true);
     };
@@ -904,6 +1001,56 @@
     if (name) name.focus({ preventScroll: true });
   }
 
+  /** File → Load a sample: pick one of the ready-made menus in samples.js. */
+  function openSamples() {
+    const list = window.SAMPLES || [];
+    const back = el('div', { class: 'dlg-back' });
+    const close = () => { back.classList.remove('show'); setTimeout(() => back.remove(), 150); document.removeEventListener('keydown', key, true); };
+    const key = e => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
+    const search = el('input', { class: 'smp-search', placeholder: 'Search samples…', oninput: () => filter() });
+    const body = el('div', { class: 'smp-list' });
+    const draw = () => {
+      body.innerHTML = '';
+      ['Beginner', 'Intermediate', 'Advanced'].forEach(level => {
+        const items = list.map((x, n) => [x, n]).filter(([x]) => x.level === level);
+        if (!items.length) return;
+        body.append(el('div', { class: 'smp-level' }, level));
+        items.forEach(([x, n]) => body.append(el('button', { type: 'button', class: 'smp-item', 'data-text': (x.title + ' ' + x.about).toLowerCase(), onclick: () => pick(x) },
+          el('span', { class: 'smp-n' }, String(n + 1)),
+          el('span', { class: 'smp-t' }, el('b', {}, x.title), el('span', {}, x.about)),
+          el('span', { class: 'smp-c' }, `${x.flow.screens.length} screens`))));
+      });
+    };
+    const filter = () => {
+      const q = search.value.trim().toLowerCase();
+      body.querySelectorAll('.smp-item').forEach(b => b.hidden = q && !b.dataset.text.includes(q));
+      body.querySelectorAll('.smp-level').forEach(h => {
+        let n = h.nextElementSibling, any = false;
+        while (n && !n.classList.contains('smp-level')) { if (!n.hidden) any = true; n = n.nextElementSibling; }
+        h.hidden = !any;
+      });
+    };
+    const pick = async x => {
+      const hasWork = flow.screens.some(s => s.text.trim() || (s.options || []).some(o => o.label.trim())) || flow.screens.length > 1;
+      if (hasWork && !(await window.ask({ title: `Load "${x.title}"?`, message: 'This replaces the menu you are working on. Use File → Save to file first if you want to keep it.', ok: 'Load sample', icon: 'folder' }))) return;
+      close();
+      flow = normalize(clone(x.flow));
+      selectedId = null; openMore.clear();
+      flow.screens.forEach(s => { delete s.x; delete s.y; });   // let the map lay it out
+      changed(true);
+      window.toast && window.toast(`Loaded "${x.title}". Press Test on phone to try it.`, 'check');
+    };
+    back.append(el('div', { class: 'dlg smp', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Load a sample' },
+      el('div', { class: 'smp-h' }, el('h3', {}, 'Load a sample'), el('span', {}, `${list.length} ready-made menus, from simple to advanced. Load one, then change it however you like.`)),
+      search, body,
+      el('div', { class: 'dlg-btns' }, el('button', { type: 'button', class: 'btn', onclick: close }, 'Close'))));
+    back.addEventListener('pointerdown', e => { if (e.target === back) close(); });
+    document.addEventListener('keydown', key, true);
+    draw();
+    document.body.append(back);
+    setTimeout(() => { back.classList.add('show'); search.focus(); }, 10);
+  }
+
   /** Jump from the map to the screen's full editor in the list. */
   function editInList(id) {
     setView('list');
@@ -916,6 +1063,7 @@
     const scroll = box.scrollTop;
     box.innerHTML = '';
     box.append(el('datalist', { id: 'bVars' }, knownVars().map(v => el('option', { value: v }))));
+    box.append(el('datalist', { id: 'bValVars' }, knownVars().map(v => el('option', { value: `{{${v}}}` }))));
     box.append(el('div', { class: 'two', style: 'margin-bottom:4px' },
       el('div', {}, el('label', { style: 'margin-top:0' }, 'Service name'),
         el('input', { value: flow.name, placeholder: 'Name of your service', oninput: e => { flow.name = e.target.value; changed(false); } }))));
@@ -933,9 +1081,16 @@
 
   function init() {
     render();
+    showSaveState('saved');
+    $('#bSave').onclick = saveNow;
+    $('#bSamples').onclick = openSamples;
+    document.addEventListener('click', e => { if (e.target.closest('[data-samples]')) openSamples(); });
+    document.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && !$('#page-builder').hidden) { e.preventDefault(); saveNow(); }
+    });
     $('#bAdd').onclick = () => {
       const id = uniqueId('screen');
-      flow.screens.push({ id, type: 'menu', text: '', saveAs: '', options: [{ key: '1', label: '', next: '' }], rules: [], validate: 'any', error: '', next: '' });
+      flow.screens.push({ id, type: 'menu', text: '', saveAs: '', options: [{ key: '1', label: '', next: '' }], rules: [], validate: 'any', error: '', next: '', sets: [] });
       if (view === 'map') {   // drop the new box where the user is looking
         const sc = document.querySelector('#bmap .map-scroll');
         const s = screen(id); s.x = (sc ? sc.scrollLeft : 0) + 40; s.y = (sc ? sc.scrollTop : 0) + 40;
@@ -949,7 +1104,7 @@
     $('#bTidy').onclick = () => { autoLayout(true); changed(true); };
     window.addEventListener('resize', () => { if (view === 'map') { const c = document.querySelector('#bmap .map-canvas'); if (c) drawLines(c); } });
     $('#bReset').onclick = async () => {
-      if (await ask({ title: 'Start a new menu?', message: 'This clears every screen. Use File → Save to file first if you want to keep this menu.', ok: 'Start over', danger: true, icon: 'reset' })) { flow = blankFlow(); openMore.clear(); changed(true); }
+      if (await ask({ title: 'Start a new menu?', message: 'This clears every screen. Use File → Save to file first if you want to keep this menu.', ok: 'Start over', danger: true, icon: 'reset' })) { flow = normalize(blankFlow()); openMore.clear(); changed(true); }
     };
     $('#bExport').onclick = () => download(fileName() + '.flow.json', JSON.stringify(flow, null, 2), 'application/json');
     $('#bImport').onclick = () => $('#bFile').click();

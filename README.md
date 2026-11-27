@@ -32,7 +32,22 @@ Open the **Menu builder** tab to build your USSD menus from scratch, without wri
 
 Press **▶ Test on phone** to try it, and **Get PHP code** for a ready Hubtel or Nalo endpoint written with plain `switch` statements and `if` conditions, so you can keep editing it by hand with your own logic.
 
-Optional extras sit behind **More** on each screen: remember an answer, only accept a number / 4-digit PIN / phone number, conditions that send the user to a different screen depending on the answer, and **Set values**.
+Optional extras sit behind **More** on each screen: remember an answer, only accept certain answers (a number, 4-digit PIN, phone number, email address or text without digits), conditions that send the user to a different screen depending on the answer, and **Set values**.
+
+**New to this?** Use **File → Load a sample** to load one of 30 ready-made menus — 10 beginner (main menu, Back and Exit, FAQ…), 10 intermediate (airtime, data bundles, registration, PIN check, bill payment…) and 10 advanced (send money with fees, loan calculator, insurance quote, hotel booking…). Load one, test it, then change it.
+
+### Conditions
+
+Checked in order; the first one that matches decides the next screen, otherwise the screen's normal next screen is used.
+
+| Group | Checks |
+| --- | --- |
+| Compare | equals, not equal, greater than, less than, at least (≥), at most (≤), is between (`1,100`), is one of (`1,2,3`), is not one of |
+| Text | contains, does not contain, starts with, ends with |
+| Type | is a number, is a whole number, is text, is an email, is a phone number, is empty, is not empty |
+| Length | length is, length at least, length at most |
+
+Any check with a value can compare with a value saved earlier: type `{{name}}` (the box suggests your saved values), e.g. *amount at most `{{balance}}`*, *recipient not equal `{{phone}}`* or *quantity is between `{{min}},{{max}}`*.
 
 ### Variables
 
@@ -44,7 +59,7 @@ Show a saved value in any message with `{{name}}`. `{{phone}}` and `{{network}}`
 
 **List** edits screens one by one. **Map** shows them as boxes with arrows: type straight into a box to change its name, type, message or options, drag a box by its top bar to move it, drag from an option's dot onto another box to link them (or onto empty space for a new screen), double-click a box to edit it, and right-click a box, an arrow or empty space for more (delete, remove link, add a screen here, tidy up). **Full screen** gives the map the whole window.
 
-Your menu is kept in your browser; **File → Save to file / Open file** keeps a copy as a `.json` file.
+Your menu is saved in your browser as you type (the status next to **Save** shows it; **Save** or **Ctrl+S** saves at once). **File → Save to file / Open file** keeps a copy as a `.json` file.
 
 ## Run it
 
@@ -112,7 +127,8 @@ The proxy forwards requests to any URL entered on the page. That is fine on your
 | `index.php` | Simulator UI and request proxy |
 | `builder.js` | Menu builder: list and map editor, flow runner and PHP code generator |
 | `icons.js` | Line icons (from Lucide, ISC licence) |
-| `dialog.js` | In-page confirmation dialogs |
+| `dialog.js` | In-page confirmation dialogs and messages |
+| `samples.js` | The 30 ready-made sample menus |
 | `mock.php` | Demo USSD endpoint that understands both Hubtel and Nalo |
 | `sample-hubtel.php` | Starter Hubtel endpoint — copy it into your project and build on it |
 | `sample-nalo.php` | Starter Nalo endpoint — copy it into your project and build on it |

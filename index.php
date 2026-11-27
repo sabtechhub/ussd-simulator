@@ -338,7 +338,8 @@ code{background:var(--field);border:1px solid var(--line);border-radius:4px;padd
 .scr .sub-h{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 6px}
 .grid-row{display:grid;gap:6px;align-items:center;margin-bottom:6px}
 .opt-row{grid-template-columns:52px 1fr 20px minmax(110px,.8fr) 30px}
-.rule-row{grid-template-columns:minmax(70px,.8fr) 96px minmax(56px,.6fr) 16px minmax(96px,.8fr) 30px}
+.rule-row{grid-template-columns:minmax(70px,.7fr) minmax(120px,1fr) minmax(56px,.6fr) 16px minmax(96px,.8fr) 30px}
+.rule-row input.no-value{visibility:hidden}
 .col-h{margin:10px 0 2px}.col-h span{font-size:11px;color:var(--muted);font-weight:600}
 .then-row{grid-template-columns:auto minmax(140px,380px);justify-content:start;margin-top:8px}
 .more{margin-top:8px}
@@ -434,6 +435,14 @@ kbd{font:600 11px ui-monospace,Consolas,monospace;padding:1px 5px;border:1px sol
 .warn{display:flex;align-items:center;gap:6px}
 .file-menu summary.btn{gap:5px}
 .view-seg button{gap:5px}
+.save-state{font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.save-state::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--res)}
+.save-state.saving::before{background:#f59e0b}
+.save-state.error{color:var(--err)}.save-state.error::before{background:var(--danger)}
+.toast{position:fixed;left:50%;bottom:24px;z-index:130;transform:translate(-50%,16px);opacity:0;pointer-events:none;display:flex;align-items:center;gap:8px;background:#0f172a;color:#f8fafc;padding:10px 16px;border-radius:10px;font-size:13px;box-shadow:0 10px 30px rgba(0,0,0,.3);transition:opacity .2s,transform .2s;max-width:calc(100vw - 32px)}
+:root[data-theme="dark"] .toast{background:#f1f5f9;color:#0f172a}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast .ic{color:var(--res)}
 /* editable map boxes */
 .node{cursor:default}
 .node-h{cursor:grab;padding:6px 8px 4px 6px;gap:4px;border-bottom:1px solid transparent}
@@ -463,6 +472,19 @@ kbd{font:600 11px ui-monospace,Consolas,monospace;padding:1px 5px;border:1px sol
 .var-row:hover{background:var(--btn-h)}
 .var-row code{font-size:12.5px;color:var(--accent2);background:none;border:0;padding:0}
 .var-row span{font-size:11.5px;color:var(--muted)}
+/* sample picker */
+.dlg.smp{width:min(640px,100%);grid-template-columns:1fr;max-height:86vh;display:flex;flex-direction:column;gap:12px}
+.smp-h h3{margin:0 0 4px;font-size:17px}
+.smp-h span{font-size:13px;color:var(--muted)}
+.smp-list{overflow:auto;display:flex;flex-direction:column;gap:6px;padding-right:4px;min-height:0;flex:1}
+.smp-level{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:8px 0 2px}
+.smp-item{display:grid;grid-template-columns:30px 1fr auto;gap:12px;align-items:center;text-align:left;background:var(--field);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;color:var(--text);font:inherit}
+.smp-item:hover{border-color:var(--accent2);background:color-mix(in srgb,var(--accent2) 7%,var(--field))}
+.smp-n{width:28px;height:28px;border-radius:8px;background:var(--btn);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--muted)}
+.smp-t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.smp-t b{font-size:13.5px}.smp-t span{font-size:12px;color:var(--muted)}
+.smp-c{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.dlg.smp .dlg-btns{margin-top:0}
 /* dialogs (dialog.js) */
 .dlg-back{position:fixed;inset:0;z-index:120;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;transition:opacity .15s}
 .dlg-back.show{opacity:1}
@@ -646,6 +668,8 @@ kbd{font:600 11px ui-monospace,Consolas,monospace;padding:1px 5px;border:1px sol
       <button class="btn primary" id="bRun" type="button" data-tip="Dial this menu on the test phone"><span data-i="play"></span>Test on phone</button>
       <button class="btn" id="bGen" type="button" data-tip="Turn this menu into a Hubtel or Nalo PHP endpoint"><span data-i="code"></span>Get PHP code</button>
       <button class="btn" id="bAdd" type="button" data-tip="Add a new screen"><span data-i="plus"></span>Add screen</button>
+      <button class="btn" id="bSave" type="button" data-tip="Save this menu in this browser (Ctrl+S). Changes are also saved as you type."><span data-i="save"></span>Save</button>
+      <span class="save-state" id="saveState" aria-live="polite"></span>
       <details class="file-menu var-menu" id="varMenu">
         <summary class="btn" data-tip="Every value you can show in a message with {{name}}"><span data-i="variable"></span>Variables<span data-i="chevron" data-size="14"></span></summary>
         <div class="file-pop var-pop" id="varPop"></div>
@@ -660,6 +684,7 @@ kbd{font:600 11px ui-monospace,Consolas,monospace;padding:1px 5px;border:1px sol
       <details class="file-menu">
         <summary class="btn" data-tip="Save, open or start a new menu"><span data-i="folder"></span>File<span data-i="chevron" data-size="14"></span></summary>
         <div class="file-pop">
+          <button class="btn" id="bSamples" type="button"><span data-i="grid"></span>Load a sample…</button>
           <button class="btn" id="bExport" type="button"><span data-i="download"></span>Save to file</button>
           <button class="btn" id="bImport" type="button"><span data-i="upload"></span>Open file</button>
           <button class="btn" id="bReset" type="button"><span data-i="reset"></span>Start over</button>
@@ -667,7 +692,7 @@ kbd{font:600 11px ui-monospace,Consolas,monospace;padding:1px 5px;border:1px sol
       </details>
       <input type="file" id="bFile" accept=".json,application/json" hidden>
     </div>
-    <p class="hint b-hint">Make your screens, then press <b>Test on phone</b>. When it works, press <b>Get PHP code</b>.</p>
+    <p class="hint b-hint">Make your screens, then press <b>Test on phone</b>. When it works, press <b>Get PHP code</b>. New here? <button class="link" type="button" data-samples>Load a sample</button> to see how it works.</p>
     <div id="screens"></div>
     <div id="bmap" hidden></div>
     <div class="credit">Menu Builder · Powered by <b>SAB-TECH HUB</b></div>
@@ -694,6 +719,7 @@ kbd{font:600 11px ui-monospace,Consolas,monospace;padding:1px 5px;border:1px sol
 
 <script src="icons.js"></script>
 <script src="dialog.js"></script>
+<script src="samples.js"></script>
 <script src="builder.js"></script>
 <script>
 const $ = s => document.querySelector(s);

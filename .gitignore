@@ -1,3 +1,5 @@
 .claude/
 .DS_Store
 Thumbs.db
+tutorial/*.mp4
+tutorial/build/

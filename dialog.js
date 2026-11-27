@@ -57,6 +57,15 @@
       (withCancel && o.danger ? back.querySelector('.dlg-cancel') : back.querySelector('.dlg-ok')).focus();
     });
   }
+  /** Small message at the bottom of the screen that goes away by itself. */
+  window.toast = function (text, iconName) {
+    let t = document.querySelector('.toast');
+    if (!t) { t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); document.body.append(t); }
+    t.innerHTML = (window.icon ? window.icon(iconName || 'check', 16) : '') + '<span></span>';
+    t.querySelector('span').textContent = text;
+    t.classList.add('show');
+    clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2200);
+  };
   window.ask = o => open(o, true);
   window.tell = o => open(o, false);
 })();
