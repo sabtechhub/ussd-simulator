@@ -12,13 +12,15 @@ The page shows a phone with a dialer. Dial your short code and the simulator sen
 - **Hubtel** format (`Initiation` / `Response` / `Release`, `ClientState`, `Sequence`)
 - **Nalo** format (`USERID`, `MSISDN`, `USERDATA`, `MSGTYPE`, `NETWORK`, `SESSIONID`)
 - Network selection: MTN, Telecel (Vodafone), AirtelTigo
-- Request / response log with colored JSON, copy per entry and copy all
+- Test page with setup on the left, the phone in the middle and the conversation on the right
+- Conversation view: your replies and the menu's answers as chat bubbles, with the raw JSON under **Details** (colored, copy per entry and copy all)
 - Sample PHP endpoint code for Hubtel and Nalo (view and copy) to start your own endpoint
 - Beginner friendly: plain-language steps, a "New to USSD?" guide, and a Demo menu that works straight away
 - Choose what to test: **Demo**, **My builder menu** or **My server** (with a **Check** button that tells you if your server answers correctly)
 - Optional extra headers (e.g. `Authorization`) and an option to ignore SSL errors
-- **Menu builder**: design your own USSD menus, inputs and conditions, test them on the phone, then generate the PHP endpoint
-- Light and dark theme
+- **Menu builder**: design your own USSD menus, inputs, conditions and variables, test them on the phone, then generate the PHP endpoint
+- **Map view**: screens as draggable boxes with arrows; drag from a dot to link, right-click to edit or delete
+- Tooltips on every control, in-page confirmation dialogs, light and dark theme
 
 ## Menu builder
 
@@ -30,7 +32,19 @@ Open the **Menu builder** tab to build your USSD menus from scratch, without wri
 
 Press **▶ Test on phone** to try it, and **Get PHP code** for a ready Hubtel or Nalo endpoint written with plain `switch` statements and `if` conditions, so you can keep editing it by hand with your own logic.
 
-Optional extras sit behind **More** on each screen: remember an answer (then show it with `{{name}}`; `{{phone}}` and `{{network}}` are always available), only accept a number / 4-digit PIN / phone number, and conditions that send the user to a different screen depending on the answer. Your menu is kept in your browser; **File → Save to file / Open file** keeps a copy as a `.json` file.
+Optional extras sit behind **More** on each screen: remember an answer, only accept a number / 4-digit PIN / phone number, conditions that send the user to a different screen depending on the answer, and **Set values**.
+
+### Variables
+
+Show a saved value in any message with `{{name}}`. `{{phone}}` and `{{network}}` are always available; answers you remember and values you set are added automatically. The **Variables** button lists them all — click one to copy it, or click **Add your own value** to add one.
+
+**Set value** (under More) runs when the screen opens, e.g. `price = 5` or `greeting = Hello {{phone}}`. Start a value with `=` to calculate: `total = ={{price}} * {{qty}}` (numbers, `+ - * /` and brackets).
+
+### List and Map
+
+**List** edits screens one by one. **Map** shows them as boxes with arrows: type straight into a box to change its name, type, message or options, drag a box by its top bar to move it, drag from an option's dot onto another box to link them (or onto empty space for a new screen), double-click a box to edit it, and right-click a box, an arrow or empty space for more (delete, remove link, add a screen here, tidy up). **Full screen** gives the map the whole window.
+
+Your menu is kept in your browser; **File → Save to file / Open file** keeps a copy as a `.json` file.
 
 ## Run it
 
@@ -96,7 +110,9 @@ The proxy forwards requests to any URL entered on the page. That is fine on your
 | File | Purpose |
 | --- | --- |
 | `index.php` | Simulator UI and request proxy |
-| `builder.js` | Menu builder: editor, flow runner and PHP code generator |
+| `builder.js` | Menu builder: list and map editor, flow runner and PHP code generator |
+| `icons.js` | Line icons (from Lucide, ISC licence) |
+| `dialog.js` | In-page confirmation dialogs |
 | `mock.php` | Demo USSD endpoint that understands both Hubtel and Nalo |
 | `sample-hubtel.php` | Starter Hubtel endpoint — copy it into your project and build on it |
 | `sample-nalo.php` | Starter Nalo endpoint — copy it into your project and build on it |

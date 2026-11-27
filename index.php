@@ -92,6 +92,9 @@ if (isset($_GET['proxy'])) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SAB-TECH HUB USSD Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script>
 // Apply the saved (or system) theme before the page paints
 (function(){ var t = null; try { t = localStorage.getItem('ussdsim_theme'); } catch(e) {}
@@ -110,6 +113,7 @@ if (isset($_GET['proxy'])) {
 .theme-btn{border:1px solid var(--line);background:var(--btn);color:var(--text);border-radius:999px;padding:4px 10px;cursor:pointer;font:inherit;font-size:12px}
 .theme-btn:hover{background:var(--btn-h)}
 *{box-sizing:border-box}
+[hidden]{display:none !important}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 header{padding:14px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
 header h1{font-size:17px;margin:0}
@@ -119,9 +123,22 @@ header .brand{margin-left:auto;font-size:12px;padding:4px 10px;border:1px solid 
 header .brand b{color:var(--accent)}
 footer{text-align:center;color:var(--muted);font-size:12px;padding:6px 16px 22px}
 footer b{color:var(--accent)}
-.wrap{display:grid;grid-template-columns:320px 360px 1fr;gap:18px;padding:18px;align-items:start}
-@media(max-width:1100px){.wrap{grid-template-columns:1fr 360px}.log{grid-column:1/-1}}
-@media(max-width:760px){.wrap{grid-template-columns:1fr;padding:12px}}
+/* Test page: phone on the left, setup + activity on the right */
+.wrap{display:grid;grid-template-columns:360px minmax(0,1fr);gap:24px;padding:24px;align-items:start;max-width:1180px;margin:0 auto}
+.side{display:flex;flex-direction:column;gap:16px;min-width:0}
+.wrap-b{padding:24px;max-width:1480px;margin:0 auto}
+@media(max-width:860px){.wrap{grid-template-columns:1fr;padding:12px;gap:16px}.wrap-b{padding:12px}}
+/* page switch in the header */
+header .nav{margin:0 auto;width:auto;padding:3px}
+header .nav button{flex:none;padding:7px 18px;font-size:13px}
+header .brand{margin-left:0}
+@media(max-width:860px){header .nav{order:5;width:100%;margin:4px 0 0}header .nav button{flex:1}}
+/* setup summary */
+.setup-sum{display:flex;align-items:center;gap:12px}
+.sum-text{flex:1;display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:13px;font-weight:600;min-width:0}
+.sum-text i{color:var(--muted);font-style:normal}
+#setupBody{display:flex;flex-direction:column;gap:16px}
+.setup-done{display:flex;justify-content:flex-end}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
 .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 12px}
 label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
@@ -170,7 +187,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent2);outline
 /* log */
 .log .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .log .top h2{margin:0}
-#logs{max-height:690px;overflow:auto;display:flex;flex-direction:column;gap:10px}
+#logs{max-height:560px;overflow:auto;display:flex;flex-direction:column;gap:10px}
 .entry{border:1px solid var(--line);border-radius:8px;overflow:hidden;flex-shrink:0}
 .entry .h{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 10px;font-size:12px;font-weight:600;background:var(--field)}
 .entry .h .r{display:flex;align-items:center;gap:8px}
@@ -187,6 +204,23 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent2);outline
 .modal pre{margin:0;padding:14px;overflow:auto;flex:1;font:12.5px/1.5 ui-monospace,Consolas,monospace;color:var(--code-text);white-space:pre;background:var(--code-bg);border-radius:0 0 12px 12px}
 .log .top .btns{display:flex;gap:8px;flex-wrap:wrap}
 .entry.req .h{color:var(--req)}.entry.res .h{color:var(--res)}.entry.err .h{color:var(--err)}
+/* Activity as a conversation: phone on the right, menu on the left */
+#logs .entry{border:0;border-radius:0;overflow:visible;display:flex;flex-direction:column;align-items:flex-start;max-width:100%}
+#logs .entry.req{align-items:flex-end}
+#logs .bubble{max-width:85%;white-space:pre-wrap;word-wrap:break-word;padding:9px 13px;border-radius:14px;font-size:13.5px;line-height:1.45;background:var(--sub);border:1px solid var(--line);color:var(--text)}
+#logs .entry.req .bubble{background:var(--accent2);border-color:var(--accent2);color:#fff;border-bottom-right-radius:4px}
+#logs .entry.res .bubble{border-bottom-left-radius:4px}
+#logs .entry.err .bubble,#logs .entry.warn-reply .bubble{border-color:var(--danger);color:var(--err);background:transparent}
+#logs .bubble .tag{display:block;margin-top:6px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+#logs .entry .h{background:none;padding:3px 4px 0;font-weight:500;font-size:11px;gap:6px;justify-content:flex-start;color:var(--muted)}
+#logs .entry.req .h,#logs .entry.res .h{color:var(--muted)}
+#logs .entry .h .r::before{content:'·';margin-right:6px}
+#logs .det{font-size:11px;max-width:85%;width:100%}
+#logs .entry.req .det{text-align:right}
+#logs .det summary{cursor:pointer;color:var(--muted);padding:2px 4px;display:inline-block}
+#logs .det[open]{text-align:left}
+#logs .det .cp{float:right;margin:4px 0}
+#logs .det pre{clear:both;border-radius:8px;margin-top:4px;text-align:left}
 .entry pre{margin:0;padding:10px;font:12px/1.4 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-all;color:var(--code-text);background:var(--code-bg)}
 /* header */
 header{background:var(--panel);gap:12px;padding:12px 20px}
@@ -211,6 +245,17 @@ header .ttl span{font-size:12.5px}
 .settings .hint{margin:0}
 .link{background:none;border:0;padding:0;color:var(--accent2);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 
+/* which menu to test: option cards */
+.choices{display:flex;flex-direction:column;gap:6px}
+.choices button{display:grid;grid-template-columns:18px 1fr;column-gap:10px;align-items:center;text-align:left;background:var(--field);border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer;color:var(--text);font:inherit}
+.choices button::before{content:'';grid-row:1/3;width:16px;height:16px;border-radius:50%;border:2px solid var(--line);box-sizing:border-box}
+.choices button b{font-size:13px}
+.choices button span{font-size:11.5px;color:var(--muted)}
+.choices button:hover{border-color:var(--accent2)}
+.choices button.on{border-color:var(--accent2);background:color-mix(in srgb,var(--accent2) 9%,var(--field))}
+.choices button.on::before{border:5px solid var(--accent2)}
+.src-note:empty{display:none}
+
 /* phone extras */
 .phone-col{display:flex;flex-direction:column;align-items:center}
 .status{align-items:center;padding:12px 24px 4px}
@@ -234,6 +279,41 @@ header .ttl span{font-size:12.5px}
 .guide ol{margin:0 0 12px;padding-left:20px;display:flex;flex-direction:column;gap:6px}
 .guide .t-req{color:var(--req);font-weight:600}.guide .t-res{color:var(--res);font-weight:600}
 .guide .guide-next{margin:0}
+
+/* builder map view */
+.view-seg{width:auto;padding:2px}
+.view-seg button{flex:none;padding:5px 12px;font-size:12px}
+#bTidy,#bFull{display:none}
+#tab-builder:has(#bmap:not([hidden])) :is(#bTidy,#bFull){display:inline-block}
+#tab-builder.full{position:fixed;inset:12px;z-index:40;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+#tab-builder.full .map-scroll{height:calc(100vh - 190px)}
+body.map-full{overflow:hidden}
+#bmap{position:relative}
+.map-scroll{height:620px;overflow:auto;border:1px solid var(--line);border-radius:10px;background-color:var(--field);background-image:radial-gradient(circle,var(--line) 1px,transparent 1px);background-size:20px 20px}
+.map-canvas{position:relative;min-width:100%;min-height:100%}
+.map-lines{position:absolute;left:0;top:0;pointer-events:none;overflow:visible;color:var(--muted)}
+.map-lines .ln{fill:none;stroke:currentColor;stroke-width:2}
+.map-lines .ln.rule{stroke-dasharray:5 4}
+.map-lines .ln.temp{stroke:var(--accent2);color:var(--accent2)}
+.node{position:absolute;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,.12);cursor:grab;user-select:none;touch-action:none;font-size:12px}
+.node.dragging{cursor:grabbing;box-shadow:0 10px 24px rgba(0,0,0,.25);z-index:3}
+.node.start{border-color:var(--accent)}
+.node.drop{outline:3px solid var(--accent2);outline-offset:2px}
+.node-h{display:flex;align-items:center;gap:6px;padding:8px 10px 4px}
+.node-h b{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.node-type{font-size:10px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;color:var(--muted)}
+.node.t-menu .node-type{color:var(--accent2)}.node.t-input .node-type{color:#d97706}.node.t-end .node-type{color:var(--danger)}
+.node-msg{padding:0 10px 8px;color:var(--muted);white-space:pre-wrap;max-height:3.1em;overflow:hidden;line-height:1.5}
+.node-msg.empty-msg{font-style:italic;opacity:.7}
+.node-link{position:relative;display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid var(--line);padding:5px 18px 5px 10px;color:var(--text)}
+.node-link span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.node-link.rule{color:#d97706}
+.port{position:absolute;right:-7px;top:50%;transform:translateY(-50%);width:13px;height:13px;border-radius:50%;background:var(--panel);border:2px solid var(--accent2);cursor:crosshair}
+.port.linked{background:var(--accent2)}
+.port:hover{transform:translateY(-50%) scale(1.3)}
+.node-end{border-top:1px solid var(--line);padding:5px 10px;font-size:11px;color:var(--danger);font-weight:600}
+.map-help{font-size:12px;color:var(--muted);margin-top:8px}
+.scr.flash{outline:3px solid var(--accent2);outline-offset:2px;transition:outline-color 1s}
 
 /* tabs + builder */
 .tabs{margin-bottom:12px}
@@ -284,6 +364,117 @@ code{background:var(--field);border:1px solid var(--line);border-radius:4px;padd
 .modal .mh .btns{display:flex;gap:8px;flex-wrap:wrap}
 @media(max-width:600px){.opt-row{grid-template-columns:44px 1fr 16px 1fr 30px}.rule-row{grid-template-columns:1fr 1fr}.rule-row .arrow{display:none}}
 .empty{color:var(--muted);font-size:13px;padding:20px;text-align:center;border:1px dashed var(--line);border-radius:8px}
+/* ===== polish: type, buttons, cards, spacing ===== */
+body{font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+.ic{flex-shrink:0;display:block}
+[data-i]{display:inline-flex;align-items:center}
+header{position:sticky;top:0;z-index:30;min-height:64px;padding:10px 24px;border-bottom:1px solid var(--line);background:var(--panel)}
+header .nav button{display:inline-flex;align-items:center;gap:7px}
+.theme-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px}
+.card{border-radius:14px;padding:20px;box-shadow:0 1px 2px rgba(15,23,42,.05),0 6px 18px rgba(15,23,42,.05)}
+.card-h{display:flex;flex-direction:column;gap:2px}
+.card-h h2,.log .top h2{margin:0;font-size:15px;font-weight:700;color:var(--text);text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:8px}
+.log .top h2 [data-i]{color:var(--accent2)}
+.card-sub{font-size:12.5px;color:var(--muted)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 12px;font-size:12.5px;font-weight:500;border-radius:8px;transition:background .15s,border-color .15s;white-space:nowrap}
+.btn.sm{height:28px;padding:0 10px;font-size:12px}
+.btn.icon-only{width:34px;padding:0}
+.btn.icon{width:30px;height:30px;padding:0;min-width:0}
+.seg button{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+label{font-weight:500}
+input,select,textarea{transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent2);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent2) 20%,transparent)}
+
+/* setup */
+#setupBody{gap:22px}
+.grp{display:flex;flex-direction:column}
+.grp-h{margin-bottom:10px;font-size:14px}
+.grp-h .q{color:var(--muted);cursor:help;margin-left:2px}
+.help{display:none}
+.src-note{margin-top:10px}
+.setup-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding-top:16px}
+.setup-foot .hint{margin:0}
+kbd{font:600 11px ui-monospace,Consolas,monospace;padding:1px 5px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;background:var(--field);color:var(--text)}
+.sum-ic{color:var(--accent2)}
+.adv{padding-top:14px}
+.adv summary{display:inline-flex;align-items:center;gap:6px}
+.choices button{grid-template-columns:38px 1fr;padding:10px 12px;row-gap:1px}
+.choices button::before{display:none}
+.choices .c-ic{grid-row:1/3;width:32px;height:32px;border-radius:8px;background:var(--btn);color:var(--muted);display:flex;align-items:center;justify-content:center}
+.choices button.on .c-ic{background:var(--accent2);color:#fff}
+
+/* layout: setup + conversation on the left, phone on the right */
+.wrap{grid-template-columns:minmax(300px,380px) 360px minmax(0,1fr);max-width:1560px}
+@media(min-width:861px){.phone-col{position:sticky;top:88px}}
+@media(max-width:1180px){.wrap{grid-template-columns:minmax(0,1fr) 360px}#tab-log{grid-column:1/-1}}
+@media(max-width:860px){.wrap{grid-template-columns:1fr}}
+#tab-log{align-self:stretch;display:flex;flex-direction:column;min-width:0}
+#tab-log #logs{flex:1;max-height:calc(100vh - 200px);min-height:420px}
+.log .top{margin-bottom:14px}
+#logs{max-height:520px}
+
+/* tooltips */
+.tip{position:fixed;left:0;top:0;z-index:100;max-width:260px;padding:7px 10px;border-radius:8px;background:#0f172a;color:#f8fafc;font-size:12px;line-height:1.4;box-shadow:0 6px 20px rgba(0,0,0,.25);pointer-events:none;opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
+:root[data-theme="dark"] .tip{background:#f1f5f9;color:#0f172a}
+.tip.show{opacity:1;transform:none}
+
+/* right-click menu */
+.ctx{position:fixed;z-index:90;min-width:210px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:5px;box-shadow:0 12px 32px rgba(0,0,0,.22);display:flex;flex-direction:column}
+.ctx button{background:none;border:0;text-align:left;padding:8px 10px;border-radius:6px;font:inherit;font-size:13px;color:var(--text);cursor:pointer}
+.ctx button:hover{background:var(--btn-h)}
+.ctx button.danger{color:var(--danger)}
+.ctx button.danger:hover{background:var(--danger);color:#fff}
+.ctx-sep{height:1px;background:var(--line);margin:4px 2px}
+
+/* map and builder extras */
+.node.sel{outline:2px solid var(--accent2);outline-offset:2px}
+.map-lines .ln.hit{stroke:transparent;stroke-width:14;pointer-events:stroke;cursor:context-menu}
+.map-lines .ln.hit:hover{stroke:color-mix(in srgb,var(--accent2) 25%,transparent)}
+.b-hint{margin:0 0 14px}
+.warn{display:flex;align-items:center;gap:6px}
+.file-menu summary.btn{gap:5px}
+.view-seg button{gap:5px}
+/* editable map boxes */
+.node{cursor:default}
+.node-h{cursor:grab;padding:6px 8px 4px 6px;gap:4px;border-bottom:1px solid transparent}
+.node.dragging .node-h{cursor:grabbing}
+.node-h .grip{color:var(--muted);display:flex;opacity:.7}
+.node input,.node textarea,.node select{background:transparent;border:1px solid transparent;border-radius:6px;color:var(--text);font:inherit;font-size:12px;padding:3px 5px;width:auto;min-width:0}
+.node input:hover,.node textarea:hover,.node select:hover{border-color:var(--line);background:var(--field)}
+.node input:focus,.node textarea:focus,.node select:focus{border-color:var(--accent2);background:var(--field);box-shadow:none}
+.node-name{flex:1;font-family:ui-monospace,Consolas,monospace !important;font-weight:700;font-size:12.5px !important}
+.node-typesel{font-size:10px !important;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 2px !important;cursor:pointer;color:var(--muted) !important}
+.node.t-menu .node-typesel{color:var(--accent2) !important}.node.t-input .node-typesel{color:#d97706 !important}.node.t-end .node-typesel{color:var(--danger) !important}
+.node-msg-in{display:block;width:calc(100% - 12px) !important;margin:0 6px 6px;resize:none;overflow:hidden;line-height:1.45;min-height:26px;color:var(--muted) !important}
+.node-link.opt{padding:3px 18px 3px 6px;gap:4px}
+.node-link .nk{width:30px;text-align:center;font-weight:600;padding:3px 2px}
+.node-link .nl{flex:1}
+.nx-del{opacity:0;background:none;border:0;color:var(--muted);cursor:pointer;padding:2px;display:flex;border-radius:4px}
+.node-link.opt:hover .nx-del{opacity:1}
+.nx-del:hover{color:var(--danger);background:var(--btn-h)}
+.node-add{display:flex;align-items:center;gap:4px;width:100%;background:none;border:0;border-top:1px solid var(--line);color:var(--accent2);font:inherit;font-size:11.5px;font-weight:600;padding:6px 10px;cursor:pointer;border-radius:0 0 10px 10px}
+.node-add:hover{background:var(--btn-h)}
+.set-help{font-size:11.5px;color:var(--muted);margin:-2px 0 8px}
+.set-row{grid-template-columns:minmax(80px,.8fr) 14px minmax(100px,1.4fr) 30px}
+.node-set{display:flex;align-items:center;gap:5px;padding:0 10px 6px;font:11.5px ui-monospace,Consolas,monospace;color:var(--accent2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.var-pop{min-width:320px;max-height:360px;overflow:auto;right:auto;left:0}
+.var-h{font-size:11.5px;color:var(--muted);padding:6px 8px}
+.var-row{display:flex;flex-direction:column;align-items:flex-start;gap:1px;background:none;border:0;border-radius:6px;padding:7px 8px;text-align:left;cursor:pointer;color:var(--text);font:inherit}
+.var-row:hover{background:var(--btn-h)}
+.var-row code{font-size:12.5px;color:var(--accent2);background:none;border:0;padding:0}
+.var-row span{font-size:11.5px;color:var(--muted)}
+/* dialogs (dialog.js) */
+.dlg-back{position:fixed;inset:0;z-index:120;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;transition:opacity .15s}
+.dlg-back.show{opacity:1}
+.dlg{width:min(420px,100%);background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,.3);padding:22px;display:grid;grid-template-columns:40px 1fr;gap:4px 14px;transform:translateY(8px) scale(.98);transition:transform .15s}
+.dlg-back.show .dlg{transform:none}
+.dlg-ic{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--accent2) 14%,transparent);color:var(--accent2)}
+.dlg-ic.danger{background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger)}
+.dlg-body h3{margin:2px 0 6px;font-size:16px}
+.dlg-msg{margin:0;color:var(--muted);font-size:13.5px;line-height:1.5}
+.dlg-list{margin:8px 0 4px;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:3px}
+.dlg-btns{grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.btn.danger-btn{background:var(--danger);border-color:var(--danger);color:#fff}
 </style>
 </head>
 <body>
@@ -293,70 +484,92 @@ code{background:var(--field);border:1px solid var(--line);border-radius:4px;padd
     <h1>SAB-TECH HUB USSD Simulator</h1>
     <span>Test Hubtel &amp; Nalo USSD menus without a phone</span>
   </div>
+  <nav class="seg nav" id="mainTabs" aria-label="Pages">
+    <button data-v="log" type="button" data-tip="Dial a menu on the phone and see every message"><span data-i="phone"></span>Test</button>
+    <button data-v="builder" type="button" data-tip="Make your own USSD menu, then test it or get its PHP code"><span data-i="workflow"></span>Menu builder</button>
+  </nav>
   <span class="brand">Powered by <b>SAB-TECH HUB</b></span>
-  <button class="theme-btn" id="themeBtn" type="button" title="Switch light / dark theme">Light mode</button>
+  <button class="theme-btn" id="themeBtn" type="button" data-tip="Switch between light and dark colours"></button>
 </header>
 
-<div class="wrap">
-  <!-- settings -->
-  <section class="card settings">
-    <div class="grp">
-      <div class="grp-h"><span class="n">1</span>Your USSD provider</div>
-      <p class="help">The company that connects your service to the phone networks. Not sure? Keep Hubtel.</p>
-      <div class="seg" id="provSeg">
-        <button data-v="hubtel">Hubtel</button>
-        <button data-v="nalo">Nalo</button>
+<!-- Test page: setup (left) | phone (middle) | conversation (right) -->
+<main class="wrap" id="page-test">
+  <div class="side">
+    <section class="card settings" id="setup">
+      <div class="setup-sum" id="setupSum" hidden>
+        <span class="sum-ic" data-i="settings"></span>
+        <div class="sum-text" id="sumText"></div>
+        <button class="btn" id="setupOpen" type="button" data-tip="Change the provider, menu, phone number or code"><span data-i="pencil"></span>Change</button>
       </div>
-    </div>
 
-    <div class="grp">
-      <div class="grp-h"><span class="n">2</span>Which menu to test</div>
-      <div class="seg src" id="srcSeg">
-        <button data-v="demo" title="A ready-made test menu">Demo</button>
-        <button data-v="builder" title="The menu you make in the Menu builder tab">My builder menu</button>
-        <button data-v="url" title="Your own USSD server">My server</button>
-      </div>
-      <div id="srcUrl">
-        <div class="url-row">
-          <input id="endpoint" placeholder="https://yourdomain.com/ussd" aria-label="Your USSD endpoint URL">
-          <button class="btn" id="checkBtn" type="button" title="Send one test dial to this URL">Check</button>
+      <div id="setupBody">
+        <div class="card-h">
+          <h2>Set up your test</h2>
+          <span class="card-sub">Three quick choices, then dial on the phone.</span>
+        </div>
+
+        <div class="grp">
+          <div class="grp-h"><span class="n">1</span>Your USSD provider
+            <span class="q" data-tip="The company that connects your USSD service to MTN, Telecel and AirtelTigo. Each one sends requests in its own format." data-i="help"></span></div>
+          <div class="seg" id="provSeg">
+            <button data-v="hubtel" type="button" data-tip="Requests use Hubtel's format (Type, Message, ClientState…)">Hubtel</button>
+            <button data-v="nalo" type="button" data-tip="Requests use Nalo's format (USERID, MSISDN, USERDATA, MSGTYPE…)">Nalo</button>
+          </div>
+        </div>
+
+        <div class="grp">
+          <div class="grp-h"><span class="n">2</span>Which menu to test</div>
+          <div class="choices" id="srcSeg">
+            <button data-v="demo" type="button" data-tip="Try the simulator with a small built-in menu"><span class="c-ic" data-i="flask"></span><b>Demo</b><span>A ready-made test menu</span></button>
+            <button data-v="builder" type="button" data-tip="Runs the menu you make on the Menu builder page"><span class="c-ic" data-i="workflow"></span><b>My builder menu</b><span>The menu you make in the Menu builder</span></button>
+            <button data-v="url" type="button" data-tip="Sends real Hubtel or Nalo requests to your own server"><span class="c-ic" data-i="server"></span><b>My server</b><span>Your own USSD server address</span></button>
+          </div>
+          <div id="srcUrl">
+            <div class="url-row">
+              <input id="endpoint" placeholder="https://yourdomain.com/ussd" aria-label="Your USSD endpoint URL">
+              <button class="btn" id="checkBtn" type="button" data-tip="Send one test dial to this address and check the reply"><span data-i="check"></span>Check</button>
+            </div>
+          </div>
+          <div class="src-note" id="srcNote"></div>
+        </div>
+
+        <div class="grp">
+          <div class="grp-h"><span class="n">3</span>Test phone
+            <span class="q" data-tip="Pretend to be a customer: this number and network are sent to the menu, and the code is what they dial." data-i="help"></span></div>
+          <div class="row">
+            <div><label for="msisdn">Phone number</label><input id="msisdn" value="233241234567" data-tip="The caller's number, with country code (233…)"></div>
+            <div><label for="operator">Network</label>
+              <select id="operator" data-tip="The caller's mobile network">
+                <option value="mtn">MTN</option>
+                <option value="telecel">Telecel (Vodafone)</option>
+                <option value="airteltigo">AirtelTigo</option>
+              </select></div>
+          </div>
+          <label for="code">Code to dial</label>
+          <input id="code" value="*713#" data-tip="Your short code, e.g. *713# or *713*1#">
+        </div>
+
+        <details class="adv" id="advBox">
+          <summary><span data-i="settings"></span>Advanced settings <small>(optional)</small></summary>
+          <div id="naloOnly">
+            <label for="userid">Nalo USERID</label>
+            <input id="userid" value="NALOTest" data-tip="The USERID Nalo sends with each request">
+          </div>
+          <label for="headers">Extra headers (one per line)</label>
+          <textarea id="headers" placeholder="Authorization: Bearer xyz" data-tip="Added to every request, e.g. an API key your server checks"></textarea>
+          <label class="chk" data-tip="Only for testing servers with a self-signed or expired certificate"><input type="checkbox" id="insecure"> Ignore SSL certificate errors</label>
+        </details>
+
+        <div class="setup-foot">
+          <span class="hint">Keyboard: digits, <kbd>*</kbd> <kbd>#</kbd>, <kbd>Enter</kbd> to dial or send, <kbd>Esc</kbd> to cancel.</span>
+          <button class="btn primary" id="setupDone" type="button" data-tip="Fold these settings into one line">Done</button>
         </div>
       </div>
-      <div class="src-note" id="srcNote"></div>
-    </div>
+    </section>
 
-    <div class="grp">
-      <div class="grp-h"><span class="n">3</span>Test phone</div>
-      <p class="help">Pretend you are a customer with this phone.</p>
-      <div class="row">
-        <div><label for="msisdn">Phone number</label><input id="msisdn" value="233241234567"></div>
-        <div><label for="operator">Network</label>
-          <select id="operator">
-            <option value="mtn">MTN</option>
-            <option value="telecel">Telecel (Vodafone)</option>
-            <option value="airteltigo">AirtelTigo</option>
-          </select></div>
-      </div>
-      <label for="code">Code to dial (your short code)</label>
-      <input id="code" value="*713#">
-    </div>
+  </div>
 
-    <details class="adv" id="advBox">
-      <summary>Advanced settings <small>(you can skip this)</small></summary>
-      <div id="naloOnly">
-        <label for="userid">Nalo USERID</label>
-        <input id="userid" value="NALOTest">
-      </div>
-      <label for="headers">Extra headers (one per line)</label>
-      <textarea id="headers" placeholder="Authorization: Bearer xyz"></textarea>
-      <label class="chk"><input type="checkbox" id="insecure"> Ignore SSL certificate errors</label>
-    </details>
-
-    <p class="hint">Your keyboard works too: digits, <b>*</b>, <b>#</b>, <b>Enter</b> to dial or send, <b>Esc</b> to cancel.</p>
-  </section>
-
-  <!-- phone -->
-  <section class="phone-col">
+  <section class="phone-col" aria-label="Test phone">
     <div class="phone">
       <div class="screen">
         <div class="notch"></div>
@@ -375,10 +588,10 @@ code{background:var(--field);border:1px solid var(--line);border-radius:4px;padd
         <div class="pad" id="pad"></div>
         <div class="actions">
           <span></span>
-          <button class="call" id="callBtn" title="Dial">
+          <button class="call" id="callBtn" type="button" data-tip="Dial the code">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1l-2.3 2.2z"/></svg>
           </button>
-          <button class="del" id="delBtn" title="Delete">⌫</button>
+          <button class="del" id="delBtn" type="button" data-tip="Delete the last digit"><span data-i="backspace" data-size="22"></span></button>
         </div>
 
         <div class="overlay" id="overlay">
@@ -388,8 +601,8 @@ code{background:var(--field);border:1px solid var(--line);border-radius:4px;padd
               <div class="msg" id="msg"></div>
               <input id="reply" autocomplete="off" inputmode="numeric">
               <div class="btns">
-                <button id="cancelBtn">CANCEL</button>
-                <button id="sendBtn">SEND</button>
+                <button id="cancelBtn" type="button">CANCEL</button>
+                <button id="sendBtn" type="button">SEND</button>
               </div>
             </div>
           </div>
@@ -402,57 +615,64 @@ code{background:var(--field);border:1px solid var(--line);border-radius:4px;padd
     </div>
   </section>
 
-  <!-- log -->
-  <section class="card log">
-    <div class="seg tabs" id="mainTabs">
-      <button data-v="log">Activity</button>
-      <button data-v="builder">Menu builder</button>
-    </div>
-
-    <div id="tab-log">
-      <div class="top">
-        <span class="top-hint">Every message between the phone and the menu</span>
-        <div class="btns">
-          <button class="btn" id="viewSample" title="View and copy a starter PHP endpoint">Sample PHP code</button>
-          <button class="btn" id="copyAll">Copy all</button>
-          <button class="btn" id="clearLog">Clear</button>
-        </div></div>
-      <div id="logs">
-        <div class="empty guide">
-          <h3>New to USSD?</h3>
-          <p>USSD is the menu that pops up when you dial a code like <b>*713#</b> on any phone. It works without internet or apps.</p>
-          <ol>
-            <li>Press the green <b>call</b> button on the phone.</li>
-            <li>A menu pops up. Type a number and press <b>SEND</b>.</li>
-            <li>Each step shows up here: <span class="t-req">→ what the phone sent</span> and <span class="t-res">← what came back</span>.</li>
-          </ol>
-          <p class="guide-next">Ready to make your own menu? <button class="link" type="button" data-goto="builder">Open the Menu builder →</button></p>
-        </div>
+  <section class="card log" id="tab-log">
+    <div class="top">
+      <h2><span data-i="chat"></span>Conversation</h2>
+      <div class="btns">
+        <button class="btn" id="viewSample" type="button" data-tip="Starter PHP code for a Hubtel or Nalo endpoint"><span data-i="code"></span>Sample code</button>
+        <button class="btn" id="copyAll" type="button" data-tip="Copy the whole conversation with all request details"><span data-i="copy"></span>Copy all</button>
+        <button class="btn" id="clearLog" type="button" data-tip="Clear the conversation"><span data-i="eraser"></span>Clear</button>
       </div>
     </div>
-
-    <div id="tab-builder" hidden>
-      <div class="bbar">
-        <button class="btn primary" id="bRun" title="Dial this menu on the phone">▶ Test on phone</button>
-        <button class="btn" id="bGen" title="Get the PHP code for this menu">Get PHP code</button>
-        <button class="btn" id="bAdd">+ Add screen</button>
-        <span class="sp"></span>
-        <details class="file-menu">
-          <summary class="btn">File ▾</summary>
-          <div class="file-pop">
-            <button class="btn" id="bExport" title="Save this menu as a .json file">Save to file</button>
-            <button class="btn" id="bImport" title="Open a menu saved earlier">Open file</button>
-            <button class="btn" id="bReset" title="Clear everything and start a new menu">Start over</button>
-          </div>
-        </details>
-        <input type="file" id="bFile" accept=".json,application/json" hidden>
+    <div id="logs">
+      <div class="empty guide">
+        <h3>New to USSD?</h3>
+        <p>USSD is the menu that pops up when you dial a code like <b>*713#</b> on any phone. It works without internet or apps.</p>
+        <ol>
+          <li>Press the green <b>call</b> button on the phone.</li>
+          <li>A menu pops up. Type a number and press <b>SEND</b>.</li>
+          <li>Each step shows up here as a conversation: <span class="t-req">your replies on the right</span>, <span class="t-res">the menu on the left</span>.</li>
+        </ol>
+        <p class="guide-next">Ready to make your own menu? <button class="link" type="button" data-goto="builder">Open the Menu builder</button></p>
       </div>
-      <p class="hint" style="margin-top:0">Make your screens, then press <b>Test on phone</b>. When it works, press <b>Get PHP code</b>.</p>
-      <div id="screens"></div>
-      <div class="credit">Menu Builder · Powered by <b>SAB-TECH HUB</b></div>
     </div>
   </section>
-</div>
+</main>
+
+<!-- Menu builder page -->
+<main class="wrap-b" id="page-builder" hidden>
+  <section class="card builder" id="tab-builder">
+    <div class="bbar">
+      <button class="btn primary" id="bRun" type="button" data-tip="Dial this menu on the test phone"><span data-i="play"></span>Test on phone</button>
+      <button class="btn" id="bGen" type="button" data-tip="Turn this menu into a Hubtel or Nalo PHP endpoint"><span data-i="code"></span>Get PHP code</button>
+      <button class="btn" id="bAdd" type="button" data-tip="Add a new screen"><span data-i="plus"></span>Add screen</button>
+      <details class="file-menu var-menu" id="varMenu">
+        <summary class="btn" data-tip="Every value you can show in a message with {{name}}"><span data-i="variable"></span>Variables<span data-i="chevron" data-size="14"></span></summary>
+        <div class="file-pop var-pop" id="varPop"></div>
+      </details>
+      <span class="sp"></span>
+      <div class="seg view-seg" id="bView">
+        <button data-v="list" type="button" data-tip="Edit screens one by one"><span data-i="list"></span>List</button>
+        <button data-v="map" type="button" data-tip="See screens as boxes with arrows; drag to arrange and link"><span data-i="workflow"></span>Map</button>
+      </div>
+      <button class="btn icon-only" id="bTidy" type="button" data-tip="Line the boxes up neatly" aria-label="Tidy up"><span data-i="grid"></span></button>
+      <button class="btn icon-only" id="bFull" type="button" data-tip="Use the whole window for the map (Esc to close)" aria-label="Full screen"><span data-i="maximize"></span></button>
+      <details class="file-menu">
+        <summary class="btn" data-tip="Save, open or start a new menu"><span data-i="folder"></span>File<span data-i="chevron" data-size="14"></span></summary>
+        <div class="file-pop">
+          <button class="btn" id="bExport" type="button"><span data-i="download"></span>Save to file</button>
+          <button class="btn" id="bImport" type="button"><span data-i="upload"></span>Open file</button>
+          <button class="btn" id="bReset" type="button"><span data-i="reset"></span>Start over</button>
+        </div>
+      </details>
+      <input type="file" id="bFile" accept=".json,application/json" hidden>
+    </div>
+    <p class="hint b-hint">Make your screens, then press <b>Test on phone</b>. When it works, press <b>Get PHP code</b>.</p>
+    <div id="screens"></div>
+    <div id="bmap" hidden></div>
+    <div class="credit">Menu Builder · Powered by <b>SAB-TECH HUB</b></div>
+  </section>
+</main>
 
 <footer>SAB-TECH HUB USSD Simulator · Powered by <b>SAB-TECH HUB</b> · © <span id="yr"></span></footer>
 
@@ -472,15 +692,43 @@ code{background:var(--field);border:1px solid var(--line);border-radius:4px;padd
   </div>
 </div>
 
+<script src="icons.js"></script>
+<script src="dialog.js"></script>
 <script src="builder.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 $('#yr').textContent = new Date().getFullYear();
+fillIcons();
+
+/* ---------- tooltips: any element with data-tip ---------- */
+const tipEl = document.createElement('div'); tipEl.className = 'tip'; tipEl.setAttribute('role', 'tooltip'); document.body.append(tipEl);
+let tipFor = null, tipTimer = null;
+function showTip(t){
+  const text = t.dataset.tip; if (!text) return;
+  tipFor = t; tipEl.textContent = text; tipEl.classList.add('show');
+  const r = t.getBoundingClientRect(), w = tipEl.offsetWidth, h = tipEl.offsetHeight;
+  let x = r.left + r.width / 2 - w / 2, y = r.top - h - 8, below = false;
+  if (y < 6) { y = r.bottom + 8; below = true; }
+  x = Math.max(8, Math.min(x, innerWidth - w - 8));
+  tipEl.style.left = x + 'px'; tipEl.style.top = y + 'px'; tipEl.classList.toggle('below', below);
+}
+function hideTip(){ clearTimeout(tipTimer); tipFor = null; tipEl.classList.remove('show'); }
+document.addEventListener('mouseover', e => {
+  const t = e.target.closest('[data-tip]');
+  if (t === tipFor) return;
+  hideTip(); if (!t) return;
+  tipTimer = setTimeout(() => showTip(t), 350);
+});
+document.addEventListener('focusin', e => { const t = e.target.closest('[data-tip]'); if (t && e.target.matches(':focus-visible')) showTip(t); });
+document.addEventListener('focusout', hideTip);
+document.addEventListener('pointerdown', hideTip);
+window.addEventListener('scroll', hideTip, true);
+
 
 /* ---------- theme ---------- */
 function applyTheme(t){
   document.documentElement.setAttribute('data-theme', t);
-  $('#themeBtn').textContent = t === 'dark' ? 'Light mode' : 'Dark mode';
+  $('#themeBtn').innerHTML = t === 'dark' ? icon('sun') + '<span>Light</span>' : icon('moon') + '<span>Dark</span>';
 }
 applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
 $('#themeBtn').onclick = () => {
@@ -508,9 +756,9 @@ function setProvider(p){
 const BASE_URL = location.href.split('?')[0].split('#')[0].replace(/[^/]*$/, '');
 /* ---------- which menu to test: demo / builder / own server ---------- */
 const SRC_NOTES = {
-  demo: 'A ready-made test menu. Press the green button on the phone to try it.',
-  builder: 'Runs the menu you make in the <button class="link" type="button" data-goto="builder">Menu builder</button> tab.',
-  url: 'The address of your own USSD server (the callback URL you gave Hubtel or Nalo).',
+  demo: '',
+  builder: '<button class="link" type="button" data-goto="builder">Open the Menu builder</button>',
+  url: 'Paste the callback URL you gave Hubtel or Nalo, then press Check.',
 };
 let src = read('src');
 { // older versions kept demo / builder in the URL box: move them to the new choice
@@ -530,6 +778,29 @@ $('#srcSeg').onclick = e => { const b = e.target.closest('button'); if (b) setSr
 /** The address requests go to for the current choice. */
 function endpointUrl(){ return src === 'url' ? $('#endpoint').value.trim() : src === 'demo' ? BASE_URL + 'mock.php' : Flow.ENDPOINT; }
 setSrc(src);
+
+/* ---------- setup: full form, or a one-line summary once it is done ---------- */
+function updateSummary(){
+  const srcName = { demo: 'Demo menu', builder: 'My builder menu', url: 'My server' }[src];
+  const net = $('#operator').selectedOptions[0]?.textContent.replace(/ \(.*\)/, '') || '';
+  const parts = [provider === 'hubtel' ? 'Hubtel' : 'Nalo', srcName, $('#msisdn').value.trim() + ' (' + net + ')', $('#code').value.trim()];
+  $('#sumText').innerHTML = parts.map(p => '<span>' + escapeHtml(p) + '</span>').join('<i>·</i>');
+}
+function setSetupOpen(open){
+  $('#setupBody').hidden = !open;
+  $('#setupSum').hidden = open;
+  store('setup', open ? 'open' : 'closed');
+  updateSummary();
+}
+$('#setupOpen').onclick = () => setSetupOpen(true);
+$('#setupDone').onclick = () => {
+  if (src === 'url' && !$('#endpoint').value.trim()) { $('#endpoint').focus(); setPill('error', 'Add your server address first'); return; }
+  setSetupOpen(false);
+};
+['#provSeg', '#srcSeg'].forEach(s => $(s).addEventListener('click', () => setTimeout(updateSummary)));
+['#msisdn', '#code', '#operator'].forEach(s => $(s).addEventListener('input', updateSummary));
+$('#operator').addEventListener('change', updateSummary);
+setSetupOpen(read('setup') === 'closed' ? false : true);   // first visit: show the full form
 
 // "Check" sends one test dial to the user's own server and says whether it answered properly
 $('#checkBtn').onclick = async () => {
@@ -653,27 +924,37 @@ function parseResponse(raw){
 
 async function send(kind, text){
   const payload = buildPayload(kind, text);
-  addLog('req', `→ ${S.provider.toUpperCase()} ${kind === 'start' ? 'initiation' : kind}  · step ${S.seq}`, JSON.stringify(payload, null, 2));
+  const gw = S.provider === 'hubtel' ? 'Hubtel' : 'Nalo';
+  const said = kind === 'start' ? 'Dialed ' + text : kind === 'cancel' ? 'Cancelled the session' : text;
+  addLog('req', `Phone · step ${S.seq}`, JSON.stringify(payload, null, 2), said);
   if (endpointUrl() === Flow.ENDPOINT) {
     // Answered by the menu builder flow in this page, same rules as the generated PHP
     const body = JSON.stringify(Flow.respond(payload, S.provider));
-    addLog('res', '← Menu builder flow', JSON.stringify(JSON.parse(body), null, 2));
+    if (kind !== 'cancel') addLog('res', 'Menu builder', JSON.stringify(JSON.parse(body), null, 2), replySummary(body));
     return { status: 200, time_ms: 0, body, error: null };
   }
   try {
     const r = await fetch('?proxy=1', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ url: endpointUrl(), payload, insecure: $('#insecure').checked, headers: $('#headers').value }) });
     const j = await r.json();
-    if (j.error) addLog('err', `✕ Error${j.time_ms !== undefined ? ' · ' + j.time_ms + ' ms' : ''}`, j.error);
+    if (j.error) addLog('err', 'Could not reach the menu', j.error, j.error);
     else {
       let pretty = j.body; try { pretty = JSON.stringify(JSON.parse(j.body), null, 2); } catch(e){}
-      addLog(j.status >= 400 ? 'err' : 'res', `← HTTP ${j.status} · ${j.time_ms} ms`, pretty || '(empty body)');
+      if (j.status >= 400) addLog('err', `${gw} reply · HTTP ${j.status} · ${j.time_ms} ms`, pretty || '(empty body)', `The server answered with an error (HTTP ${j.status}).`);
+      else if (kind !== 'cancel') addLog('res', `Menu · ${j.time_ms} ms`, pretty || '(empty body)', replySummary(j.body));
     }
     return j;
   } catch (e) {
-    addLog('err', '✕ Simulator error', String(e) + '\n\nIs this page being served by PHP (XAMPP / php -S)? The proxy needs PHP.');
+    const m = String(e) + '\n\nIs this page being served by PHP (XAMPP / php -S)? The simulator needs PHP.';
+    addLog('err', 'Simulator error', m, m);
     return { error: String(e) };
   }
+}
+/** What the phone will show for a reply, in plain words. */
+function replySummary(body){
+  const p = parseResponse(body);
+  if (p.bad) return { text: 'The reply is not in ' + (S.provider === 'hubtel' ? 'Hubtel' : 'Nalo') + ' format:\n' + p.msg, end: true, bad: true };
+  return { text: p.msg || '(empty message)', end: p.end };
 }
 
 function handle(res){
@@ -736,22 +1017,36 @@ function cancel(){
 }
 
 /* ---------- log ---------- */
-function addLog(cls, title, body){
+/**
+ * One line in Activity: a chat bubble with what was said, and the raw JSON
+ * folded under "Details". cls: req (phone), res (menu) or err.
+ */
+function addLog(cls, title, body, said){
   const logs = $('#logs'); const empty = logs.querySelector('.empty'); if (empty) empty.remove();
-  const d = document.createElement('div'); d.className = 'entry ' + cls;
+  const s = typeof said === 'object' && said ? said : { text: String(said ?? '') };
+  const d = document.createElement('div'); d.className = 'entry ' + cls + (s.bad ? ' warn-reply' : '');
+
+  const bubble = document.createElement('div'); bubble.className = 'bubble';
+  bubble.textContent = s.text;
+  if (s.end) { const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = 'Session ended'; bubble.append(tag); }
+
   const h = document.createElement('div'); h.className = 'h';
   const t1 = document.createElement('span'); t1.textContent = title;
   const r = document.createElement('span'); r.className = 'r';
-  const t2 = document.createElement('span'); t2.textContent = new Date().toLocaleTimeString();
-  const cp = document.createElement('button'); cp.className = 'cp'; cp.textContent = 'Copy';
-  cp.onclick = () => copyText(body, cp);
-  r.append(t2, cp);
-  h.append(t1, r);
+  const t2 = document.createElement('span'); t2.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  r.append(t2); h.append(t1, r);
+
+  const det = document.createElement('details'); det.className = 'det';
+  const sum = document.createElement('summary'); sum.textContent = 'Details';
+  const cp = document.createElement('button'); cp.className = 'cp'; cp.type = 'button'; cp.textContent = 'Copy';
+  cp.onclick = e => { e.preventDefault(); copyText(body, cp); };
   const pre = document.createElement('pre');
   let isJson = false; try { JSON.parse(body); isJson = true; } catch (e) {}
   if (isJson && window.hljs) pre.innerHTML = hljs.highlight(body, { language: 'json' }).value;
   else pre.textContent = body;
-  d.append(h, pre); logs.appendChild(d); logs.scrollTop = logs.scrollHeight;
+  det.append(sum, cp, pre);
+
+  d.append(bubble, h, det); logs.appendChild(d); logs.scrollTop = logs.scrollHeight;
 }
 const GUIDE_HTML = $('#logs').innerHTML;
 $('#clearLog').onclick = () => { $('#logs').innerHTML = GUIDE_HTML; };
@@ -805,19 +1100,56 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#sampleMo
 /* ---------- tabs + menu builder ---------- */
 function setTab(t){
   document.querySelectorAll('#mainTabs button').forEach(b => b.classList.toggle('on', b.dataset.v === t));
-  $('#tab-log').hidden = t !== 'log';
-  $('#tab-builder').hidden = t !== 'builder';
+  $('#page-test').hidden = t !== 'log';
+  $('#page-builder').hidden = t !== 'builder';
+  if (t !== 'builder') setFull(false);
+  if (t === 'builder') Flow.render();   // the map needs to be visible to measure its boxes
   store('tab', t);
 }
+/* map full screen */
+function setFull(on){
+  $('#tab-builder').classList.toggle('full', on);
+  document.body.classList.toggle('map-full', on);
+  $('#bFull').innerHTML = icon(on ? 'minimize' : 'maximize');
+  $('#bFull').dataset.tip = on ? 'Back to normal size (Esc)' : 'Use the whole window for the map (Esc to close)';
+  if ($('#mainTabs .on')?.dataset.v === 'builder') Flow.render();
+}
+$('#bFull').onclick = () => setFull(!$('#tab-builder').classList.contains('full'));
+$('#bView').addEventListener('click', e => { if (e.target.closest('button[data-v=list]')) setFull(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#tab-builder').classList.contains('full')) setFull(false); });
 $('#mainTabs').onclick = e => { const b = e.target.closest('button'); if (b) setTab(b.dataset.v); };
 Flow.init();
 $("#code").addEventListener("input", () => { if (!S.active) renderDial(); });
 document.querySelectorAll(".file-pop .btn").forEach(b => b.addEventListener("click", () => b.closest("details").open = false));
+/* Variables list: every {{name}} a message can use; click one to copy it */
+$('#varMenu').addEventListener('toggle', () => {
+  if (!$('#varMenu').open) return;
+  const pop = $('#varPop');
+  pop.innerHTML = '<div class="var-h">Click a name to copy it, then paste it into a message.</div>';
+  Flow.variables().forEach(v => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'var-row';
+    b.innerHTML = '<code></code><span></span>';
+    b.querySelector('code').textContent = '{{' + v.name + '}}';
+    b.querySelector('span').textContent = v.from;
+    b.onclick = () => copyText('{{' + v.name + '}}', b.querySelector('code'), 'Copied!');
+    pop.append(b);
+  });
+  const tip = document.createElement('div'); tip.className = 'var-h';
+  const link = document.createElement('button'); link.type = 'button'; link.className = 'link';
+  link.textContent = 'Add your own value';
+  link.dataset.tip = 'Opens More → Set value on the selected screen (or the start screen)';
+  link.onclick = () => { $('#varMenu').open = false; Flow.addSetValue(); };
+  tip.append(link, document.createTextNode(' (More → Set value on any screen)'));
+  pop.append(tip);
+});
+document.addEventListener('pointerdown', e => { const m = $('#varMenu'); if (m.open && !e.target.closest('#varMenu')) m.open = false; });
 setTab(read('tab') === 'builder' ? 'builder' : 'log');
-$('#bRun').onclick = () => {
+$('#bRun').onclick = async () => {
   const p = Flow.problems();
-  if (p.length && !confirm('Some screens are not finished:\n\n' + p.map(x => `• ${x[0]}: ${x[1]}`).join('\n') + '\n\nRun anyway?')) return;
+  if (p.length && !await ask({ title: 'Some screens are not finished', list: p.map(x => `${x[0]}: ${x[1]}`), message: 'You can still test the parts that are ready.', ok: 'Test anyway', cancel: 'Keep editing', icon: 'alert' })) return;
   setSrc('builder');
+  setTab('log');              // go to the Test page, where the phone is
   if (S.active) cancel();
   dialStr = ''; renderDial();
   dial();
