@@ -9,7 +9,9 @@ $meta = json_decode(file_get_contents("$build/meta.json"), true);
 // chapter markers (shown as chapters in VLC, YouTube uploads, etc.)
 $chapters = $meta['chapters'] ?? [];
 $total = (int)$meta['videoMs'];
-$txt = ";FFMETADATA1\ntitle=SAB-TECH HUB USSD Simulator - Complete guide\nartist=SAB-TECH HUB\n";
+$esc = fn($s) => str_replace(["=", ";", "#", "\\", "\n"], ["\\=", "\\;", "\\#", "\\\\", " "], $s);
+$videoTitle = $chapters[0]['heading'] ?? 'Complete guide';   // the first title card names the video
+$txt = ";FFMETADATA1\ntitle=SAB-TECH HUB USSD Simulator - " . $esc($videoTitle) . "\nartist=SAB-TECH HUB\n";
 foreach ($chapters as $k => $c) {
     $start = (int)$c['t'];
     $end = isset($chapters[$k + 1]) ? (int)$chapters[$k + 1]['t'] : $total;

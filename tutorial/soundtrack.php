@@ -2,9 +2,10 @@
 /*
  * Composes the tutorial soundtrack: an original, calm background track plus a
  * mouse-click sound at every click time. No samples or downloaded music.
- * Usage: php soundtrack.php meta.json out.wav
+ * Usage: php soundtrack.php meta.json out.wav [narration folder]
+ * With a narration folder, the voice lines are mixed in and the music is lowered while the narrator speaks.
  */
-[$_, $metaFile, $outFile] = $argv + [null, null, null];
+[$_, $metaFile, $outFile, $narrDir] = $argv + [null, null, null, null];
 $meta = json_decode(file_get_contents($metaFile), true);
 $sr = 32000;
 $dur = $meta['videoMs'] / 1000 + 0.5;
@@ -108,9 +109,52 @@ for ($n = 0; $n < $cl; $n++) {
   $release = $tr > 0 ? exp(-1100 * $tr) * (0.35 * $hp + 0.25 * sin(2 * M_PI * 4100 * $tr)) : 0;
   $click[] = ($press + $release) * 0.55;
 }
+/* ---------- narration ---------- */
+// music on its own, normalised, then turned down (more while the narrator speaks)
+$mpeak = 0.0001; foreach ($mix as $v) { $a = abs($v); if ($a > $mpeak) $mpeak = $a; }
+$music = $mix; $mix = array_fill(0, $N, 0.0);
+$voiceOn = array_fill(0, $N, 0);
+$voiced = 0;
+if ($narrDir && !empty($meta['cues'])) {
+  foreach ($meta['cues'] as $cue) {
+    $wav = @file_get_contents($narrDir . '/' . md5($cue['key']) . '.wav');
+    if (!$wav) { fwrite(STDERR, "missing narration: {$cue['key']}\n"); continue; }
+    // find fmt and data chunks
+    $pos = 12; $vsr = 16000; $data = '';
+    while ($pos < strlen($wav) - 8) {
+      $id = substr($wav, $pos, 4); $len = unpack('V', substr($wav, $pos + 4, 4))[1];
+      if ($id === 'fmt ') $vsr = unpack('V', substr($wav, $pos + 12, 4))[1];
+      if ($id === 'data') { $data = substr($wav, $pos + 8, $len); break; }
+      $pos += 8 + $len + ($len & 1);
+    }
+    $smp = array_values(unpack('v*', $data));
+    $cnt = count($smp);
+    $s0 = (int)($cue['t'] / 1000 * $sr);
+    $outLen = (int)($cnt * $sr / $vsr);
+    for ($n = 0; $n < $outLen && $s0 + $n < $N; $n++) {
+      $x = $n * $vsr / $sr; $i = (int)$x; $fr = $x - $i;
+      $a = $smp[$i] ?? 0; $b = $smp[$i + 1] ?? $a;
+      if ($a >= 32768) $a -= 65536; if ($b >= 32768) $b -= 65536;
+      $mix[$s0 + $n] += (($a + ($b - $a) * $fr) / 32768) * 0.95;
+      $voiceOn[$s0 + $n] = 1;
+    }
+    $voiced++;
+  }
+}
+// smooth ducking: music level 0.22 normally, 0.07 under speech, with ~0.25 s glides
+$level = 0.22; $target = 0.22; $step = 1 / (0.25 * $sr);
+$hold = 0;
+for ($n = 0; $n < $N; $n++) {
+  if ($voiceOn[$n]) $hold = (int)(0.35 * $sr); elseif ($hold > 0) $hold--;
+  $target = ($voiceOn[$n] || $hold > 0) ? 0.07 : ($narrDir ? 0.22 : 0.6);
+  $level += max(-$step * 0.15, min($step * 0.15, $target - $level));
+  $mix[$n] += $music[$n] / $mpeak * $level;
+}
+unset($music, $voiceOn);
+
 foreach ($meta['clicks'] as $ms) {
   $s0 = (int)($ms / 1000 * $sr);
-  foreach ($click as $k => $v) { if ($s0 + $k < $N) $mix[$s0 + $k] += $v; }
+  foreach ($click as $k => $v) { if ($s0 + $k < $N) $mix[$s0 + $k] += $v * 0.6; }
 }
 
 /* ---------- normalise and write 16-bit WAV ---------- */
@@ -121,4 +165,4 @@ $pcm = '';
 foreach ($mix as $v) { $pcm .= pack('v', (int)round(max(-1, min(1, $v * $gain)) * 32767) & 0xFFFF); }
 $hdr = 'RIFF' . pack('V', 36 + strlen($pcm)) . 'WAVEfmt ' . pack('VvvVVvv', 16, 1, 1, $sr, $sr * 2, 2, 16) . 'data' . pack('V', strlen($pcm));
 file_put_contents($outFile, $hdr . $pcm);
-printf("soundtrack: %.1fs, %d clicks, peak gain %.2f\n", $dur, count($meta['clicks']), $gain);
+printf("soundtrack: %.1fs, %d clicks, %d voice lines, peak gain %.2f\n", $dur, count($meta['clicks']), $voiced, $gain);

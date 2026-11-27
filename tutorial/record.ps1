@@ -7,25 +7,32 @@ param(
   [string]$Url = 'http://localhost:8090/',
   [string]$Out = (Join-Path $PSScriptRoot 'build'),
   [int]$Fps = 20,
-  [int]$Port = 9339
+  [int]$Port = 9339,
+  [string]$Script = (Join-Path $PSScriptRoot 'tour-script.js'),
+  [string]$Narration = ''
 )
 $ErrorActionPreference = 'Stop'
 $frames = Join-Path $Out 'frames'
 if (Test-Path $frames) { Remove-Item -Recurse -Force $frames }
 New-Item -ItemType Directory -Force $frames | Out-Null
-$profileDir = Join-Path $Out 'edge-profile'
+# Edge's profile goes in a short temp path: deep folders hit Windows' 260-character limit and Edge quits silently
+$profileDir = Join-Path $env:TEMP ('ussd-rec-' + [Math]::Abs((Split-Path $Out -Leaf).GetHashCode()))
 if (Test-Path $profileDir) { Remove-Item -Recurse -Force $profileDir }
 
 $edge = "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
-$proc = Start-Process $edge -PassThru -ArgumentList @('--headless=new', "--remote-debugging-port=$Port", "--user-data-dir=$profileDir",
-  '--window-size=1600,900', '--hide-scrollbars', '--mute-audio', '--no-first-run', '--disable-extensions', 'about:blank')
+function Stop-RecorderEdge { Get-CimInstance Win32_Process -Filter "Name='msedge.exe'" | Where-Object { $_.CommandLine -like "*$profileDir*" } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue } }
 
 try {
-  # ---- connect to the page over the DevTools protocol ----
-  $page = $null
-  for ($i = 0; $i -lt 60 -and -not $page; $i++) {
-    Start-Sleep -Milliseconds 250
-    try { $page = (Invoke-RestMethod "http://127.0.0.1:$Port/json") | Where-Object { $_.type -eq 'page' } | Select-Object -First 1 } catch {}
+  # ---- start Edge and connect over the DevTools protocol (retry on a fresh port if it is slow to start) ----
+  $page = $null; $proc = $null
+  for ($attempt = 1; $attempt -le 3 -and -not $page; $attempt++) {
+    if ($attempt -gt 1) { Write-Host "Edge did not answer, retrying ($attempt)"; Stop-RecorderEdge; Start-Sleep -Seconds 3; $Port++ }
+    $proc = Start-Process $edge -PassThru -ArgumentList @('--headless=new', "--remote-debugging-port=$Port", "--user-data-dir=`"$profileDir`"",
+      '--window-size=1600,900', '--hide-scrollbars', '--mute-audio', '--no-first-run', '--disable-extensions', 'about:blank')
+    for ($i = 0; $i -lt 120 -and -not $page; $i++) {
+      Start-Sleep -Milliseconds 250
+      try { $page = (Invoke-RestMethod "http://127.0.0.1:$Port/json" -TimeoutSec 2) | Where-Object { $_.type -eq 'page' } | Select-Object -First 1 } catch {}
+    }
   }
   if (-not $page) { throw 'Edge did not start' }
   $ws = New-Object System.Net.WebSockets.ClientWebSocket
@@ -69,8 +76,9 @@ try {
   Start-Sleep -Milliseconds 800
 
   # ---- load the tour ----
+  if ($Narration) { Js ('window.NARR = ' + [IO.File]::ReadAllText($Narration) + ';') | Out-Null }
   Js ([IO.File]::ReadAllText((Join-Path $PSScriptRoot 'tour-engine.js'))) | Out-Null
-  Js ([IO.File]::ReadAllText((Join-Path $PSScriptRoot 'tour-script.js'))) | Out-Null
+  Js ([IO.File]::ReadAllText($Script)) | Out-Null
 
   # ---- step and capture ----
   $dt = [math]::Round(1000 / $Fps, 3)
@@ -92,7 +100,8 @@ try {
   }
   [void]$list.AppendLine("file 'frames/$last'")   # concat needs the last file repeated
   [IO.File]::WriteAllText((Join-Path $Out 'frames.txt'), $list.ToString())
-  $meta = Js 'JSON.stringify({ clicks: window.tour.clicks, videoMs: window.tour.videoMs, chapters: window.tour.tick(0).chapters })'
+  $end = Js 'JSON.stringify(window.tour.tick(0))' | ConvertFrom-Json
+  $meta = Js 'JSON.stringify((() => { const r = window.tour.tick(0); return { clicks: r.clicks, videoMs: r.videoMs, chapters: r.chapters, cues: r.cues }; })())'
   [IO.File]::WriteAllText((Join-Path $Out 'meta.json'), $meta)
   $errs = Js "JSON.stringify(window.__tourErrors || [])"
   Write-Host "TOUR ERRORS: $errs"
@@ -103,4 +112,6 @@ finally {
   try { $ws.Dispose() } catch {}
   if ($proc -and -not $proc.HasExited) { Stop-Process -Id $proc.Id -Force }
   Get-CimInstance Win32_Process -Filter "Name='msedge.exe'" | Where-Object { $_.CommandLine -like "*$profileDir*" } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+  Start-Sleep -Seconds 1
+  Remove-Item -Recurse -Force $profileDir -ErrorAction SilentlyContinue   # the temporary Edge profile
 }

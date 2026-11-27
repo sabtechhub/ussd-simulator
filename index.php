@@ -5,6 +5,29 @@
  * also acts as a small proxy: the page POSTs to ?proxy=1 and PHP forwards it.
  */
 const SAMPLE_FILES = ['hubtel' => 'sample-hubtel.php', 'nalo' => 'sample-nalo.php'];
+const GITHUB_URL = 'https://github.com/sabtechhub/ussd-simulator';
+
+/*
+ * Own computer or public website?
+ * "My server" makes THIS server send requests to an address the visitor types. That is fine on your
+ * own computer, but on a public website strangers could use it to reach private addresses or attack
+ * other sites. So it only works when the visitor is on this computer or its local network.
+ * To decide it yourself, create config.php with:  <?php define('USSD_SIM_PUBLIC', true);   (or false)
+ */
+if (is_file(__DIR__ . '/config.php')) include __DIR__ . '/config.php';
+function sim_on_own_computer(): bool {
+    if (defined('USSD_SIM_PUBLIC')) return !USSD_SIM_PUBLIC;
+    // a proxy or CDN in front of the site means visitors come from the internet
+    foreach (['HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP', 'HTTP_CF_CONNECTING_IP', 'HTTP_FORWARDED', 'HTTP_X_CLIENT_IP', 'HTTP_TRUE_CLIENT_IP'] as $h) {
+        if (!empty($_SERVER[$h])) return false;
+    }
+    $ip = preg_replace('/^::ffff:/i', '', (string)($_SERVER['REMOTE_ADDR'] ?? ''));
+    if ($ip === '') return false;
+    // loopback (127.x, ::1) and private networks (10.x, 172.16-31.x, 192.168.x, fc00::/7) count as "own computer"
+    return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false
+        && filter_var($ip, FILTER_VALIDATE_IP) !== false;
+}
+define('SIM_OWN_COMPUTER', sim_on_own_computer());
 
 // ?source=hubtel|nalo returns the sample endpoint's PHP code for the viewer
 if (isset($_GET['source'])) {
@@ -37,6 +60,12 @@ if (isset($_GET['proxy'])) {
         $t = microtime(true);
         $body = json_encode(ussd_mock_handle(json_decode($payload, true) ?: []));
         echo json_encode(['status' => 200, 'time_ms' => round((microtime(true) - $t) * 1000), 'body' => $body, 'error' => null]);
+        exit;
+    }
+    // On a public website this server never sends requests to addresses visitors type (see above).
+    if (!SIM_OWN_COMPUTER) {
+        echo json_encode(['public' => true, 'error' => 'Testing your own server is turned off on this public website, for safety. '
+            . 'It works when you run the simulator on your own computer. Download it free from GitHub: ' . GITHUB_URL]);
         exit;
     }
     // PHP's built-in server (php -S) handles one request at a time, so it can never answer
@@ -255,6 +284,8 @@ header .ttl span{font-size:12.5px}
 .choices button.on{border-color:var(--accent2);background:color-mix(in srgb,var(--accent2) 9%,var(--field))}
 .choices button.on::before{border:5px solid var(--accent2)}
 .src-note:empty{display:none}
+.pub-note{display:block;padding:10px 12px;border-radius:8px;background:color-mix(in srgb,var(--accent2) 9%,var(--field));border:1px solid var(--line);color:var(--text);line-height:1.5}
+.pub-note a{color:var(--accent2);font-weight:600}
 
 /* phone extras */
 .phone-col{display:flex;flex-direction:column;align-items:center}
@@ -717,6 +748,7 @@ kbd{font:600 11px ui-monospace,Consolas,monospace;padding:1px 5px;border:1px sol
   </div>
 </div>
 
+<script>window.SIM = { ownComputer: <?= SIM_OWN_COMPUTER ? 'true' : 'false' ?>, github: <?= json_encode(GITHUB_URL) ?> };</script>
 <script src="icons.js"></script>
 <script src="dialog.js"></script>
 <script src="samples.js"></script>
@@ -786,6 +818,8 @@ const SRC_NOTES = {
   builder: '<button class="link" type="button" data-goto="builder">Open the Menu builder</button>',
   url: 'Paste the callback URL you gave Hubtel or Nalo, then press Check.',
 };
+// on a public website, testing your own server only works after downloading the simulator
+const PUBLIC_URL_NOTE = '<span class="pub-note">Testing your own server works when you run the simulator on your own computer, for safety. <a href="' + SIM.github + '" target="_blank" rel="noopener">Download it free from GitHub</a>. Here you can still use the Demo and your builder menu.</span>';
 let src = read('src');
 { // older versions kept demo / builder in the URL box: move them to the new choice
   const ep = $('#endpoint').value.trim();
@@ -795,10 +829,10 @@ let src = read('src');
 function setSrc(v){
   src = v; store('src', v);
   document.querySelectorAll('#srcSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
-  $('#srcUrl').hidden = v !== 'url';
-  $('#srcNote').innerHTML = SRC_NOTES[v];
+  $('#srcUrl').hidden = v !== 'url' || !SIM.ownComputer;
+  $('#srcNote').innerHTML = v === 'url' && !SIM.ownComputer ? PUBLIC_URL_NOTE : SRC_NOTES[v];
   $('#checkNote') && ($('#checkNote').textContent = '');
-  if (v === 'url' && !$('#endpoint').value.trim()) setTimeout(() => $('#endpoint').focus(), 0);
+  if (v === 'url' && SIM.ownComputer && !$('#endpoint').value.trim()) setTimeout(() => $('#endpoint').focus(), 0);
 }
 $('#srcSeg').onclick = e => { const b = e.target.closest('button'); if (b) setSrc(b.dataset.v); };
 /** The address requests go to for the current choice. */
@@ -1008,6 +1042,7 @@ function updateMeta(state){
 }
 
 async function dial(){
+  if (src === 'url' && !SIM.ownComputer) { setPill('error', 'Use the Demo or your builder menu on this website'); setSetupOpen(true); return; }
   if (!endpointUrl()) { setPill('error', 'Add your server address first'); $('#endpoint').focus(); return; }
   if (src === 'builder' && Flow.flow.screens.every(s => !s.text.trim() && !(s.options || []).some(o => o.label.trim()))) {
     setPill('error', 'Your builder menu is empty — write a message first');

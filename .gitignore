@@ -3,3 +3,6 @@
 Thumbs.db
 tutorial/*.mp4
 tutorial/build/
+tutorial/videos-out/
+tutorial/voice-samples/
+config.php

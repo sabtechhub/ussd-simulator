@@ -116,9 +116,21 @@ Reply with `"Type": "Response"` to keep the session open, or `"Type": "Release"`
 
 Reply with `"MSGTYPE": true` to wait for input, or `false` to end the session. The text to show goes in `MSG`.
 
-## Security note
+## Putting it on a public website
 
-The proxy forwards requests to any URL entered on the page. That is fine on your own computer, but if you host this on a public server, anyone could use it to send requests from your server. Protect it (password, IP allow-list, or `.htaccess`) before putting it online.
+You can upload the simulator to any PHP hosting so people can use it straight away. It is safe out of the box:
+
+- **On a public website**, "My server" is turned off. The server never sends requests to addresses visitors type, so strangers cannot use your server to reach private addresses or attack other sites. Visitors see a note with a link to download the simulator from GitHub. The Demo, Menu builder, Map, samples and PHP code all still work, because they run in the visitor's browser.
+- **On your own computer** (localhost, XAMPP or your local network), "My server" works fully, including servers on your own machine like `http://localhost/ussd.php`.
+
+The simulator decides this by itself from the visitor's address (and treats any site behind a proxy or CDN as public). To decide it yourself, add a `config.php` next to `index.php`:
+
+```php
+<?php
+define('USSD_SIM_PUBLIC', true);   // true = public website mode, false = own-computer mode
+```
+
+Files to upload: `index.php`, `builder.js`, `icons.js`, `dialog.js`, `samples.js`, `mock.php`, `sample-hubtel.php`, `sample-nalo.php` (the `tutorial` folder is not needed).
 
 ## Files
 
