@@ -57,5 +57,5 @@ T.move('#copyAll', 700);
 T.say("And Sample code, shows the code for a ready-made server. You will only need it if you write your own server.");
 T.move('#viewSample', 700);
 
-L.outro("Well done. You now understand what happens when someone dials: the phone and the server chat with each other. In the next video, you will learn how to test your own server.",
+L.outro("Well done. You now understand what happens when someone dials: the phone and the server chat with each other. In the next video, you will learn how to test your own server. If you do not have a server, do not worry. From video four, you will build your menu on the Map, with no code.",
   'Test your own server');

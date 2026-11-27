@@ -68,5 +68,18 @@ L.ok();
 T.say("Look at the right side. Every step you took is shown there, like a chat. We will learn about it in the next video.");
 T.move('#tab-log h2', 800);
 
-L.outro("Great job. You now know what USSD is, and you dialed your first code. In the next video, we will look at the chat on the right, step by step.",
+L.section('Part 7', 'A first look at the Map', "Before we finish, a quick look at where you will build your own menu. The Map.");
+L.loadFlow(L.shopFlow());
+L.page('builder');
+L.onMap();
+L.tidy();
+T.say("This is a menu just like the one we used, drawn as a picture. Each box is one screen on the phone.");
+T.move(L.N('main'), 900);
+T.say("The arrows show where each option goes. Option one goes to the balance. Option two asks for the amount.");
+T.move(L.N('balance'), 800).wait(300).move(L.N('amount'), 800);
+T.say("To build, you just type in the boxes, and drag a dot to draw an arrow. No code at all. It is simple, and you will do it yourself in video four.");
+T.click('#bFull').sleep(500).wait(2000).click('#bFull').sleep(400);
+L.page('log');
+
+L.outro("Great job. You now know what USSD is, and you dialed your first code. In the next video, we will look at the chat on the right, step by step. And soon, you will build your own menu on the Map.",
   'What happens when you dial');

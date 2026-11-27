@@ -1,12 +1,11 @@
-/* Video 8: See your menu as a map (simple) */
+/* Video 8: More Map tricks */
 L.loadFlow(L.shopFlow());
-L.intro(8, 'See your menu as a map', 'Boxes and arrows that show how your menu connects.',
-  "This is video eight. When a menu grows, it helps to see the whole thing as a picture. The Map shows every screen as a box, with arrows between them.");
+L.intro(8, 'More Map tricks', 'Move, join, change and tidy your boxes like a pro.',
+  "This is video eight. You have been building on the Map. Now let us learn some handy tricks, to change a menu quickly.");
 
-L.section('Part 1', 'Open the Map', "We have a shop menu ready. Open the Menu builder.");
+L.section('Part 1', 'A bigger menu', "We have a shop menu ready. Open the Menu builder.");
 L.page('builder');
-T.say("At the top right, click Map.");
-T.click('#bView button[data-v=map]').sleep(300);
+L.onMap();
 T.click('#bTidy').sleep(300).wait(800);
 T.say("Each box is a screen. The green box is where customers start.");
 T.move('#bmap .node[data-id=main]', 900);
@@ -32,10 +31,19 @@ L.section('Part 4', 'Draw an arrow', "Now the best part. Drawing arrows.");
 T.say("Every option has a small dot on the right. Contact us has an empty dot, because it goes nowhere yet.");
 T.move(() => [...document.querySelectorAll('#bmap .node[data-id=main] .port')].pop(), 900);
 T.say("Drag from the dot to an empty space, and let go. A new screen is made, and the arrow is drawn for you.");
-T.drag(() => [...document.querySelectorAll('#bmap .node[data-id=main] .port')].pop(), null, 1200, [160, 300]).sleep(300).wait(700);
-T.say("Type the message for the new screen.");
-T.click('#bmap .node[data-id=new_screen] .node-msg-in').type('#bmap .node[data-id=new_screen] .node-msg-in', 'Call 0302 000 000', { msPerChar: 80 });
-T.say("To point an option somewhere else, drag its dot onto another box.");
+L.newScreen('main', L.lastPort('main'));
+T.say("Type the message for the new screen, and give it a name.");
+L.msg('new_screen', 'Call 0302 000 000', 80);
+L.name('new_screen', 'contact');
+T.say("To point an option somewhere else, drag its dot onto another box. Here, we point Exit to the contact box, just to show how.");
+L.focusNode('main');
+T.drag(L.port('main', 2), L.nodeMsg('contact'), 1200).sleep(300).wait(800);
+T.say("Changed our mind? Drag the dot back to the goodbye box.");
+T.drag(L.port('main', 2), L.nodeMsg('bye'), 1200).sleep(300).wait(600);
+T.say("And click the settings button on any box, to see all of its settings beside the map.");
+L.settings('amount');
+T.wait(1500);
+L.closeSettings();
 
 L.section('Part 5', 'Right-click for more', "Right-click opens a small menu with more choices.");
 T.say("Right-click a box to edit it, copy it, or delete it.");
@@ -43,6 +51,8 @@ T.rightClick('#bmap .node[data-id=balance] .node-msg-in').sleep(250).wait(2400).
 T.say("Right-click an empty space to add a new screen right there.");
 T.rightClick('#bmap .map-canvas').sleep(250).wait(2200).key('Escape').wait(300);
 T.say("And right-click an arrow to remove it. Do not worry about deleting by mistake. You are always asked first.");
+T.say("Need more room? Press the full screen button, to give the map the whole window. Press it again, or Escape, to go back.");
+T.click('#bFull').sleep(500).wait(1800).click('#bFull').sleep(400);
 T.click('#bTidy').sleep(300).wait(700);
 
 L.section('Part 6', 'Test it', "Let us test our changes.");

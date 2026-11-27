@@ -50,5 +50,5 @@ T.say("You can ignore Advanced settings. They are only for developers with speci
 T.move('#advBox summary', 700);
 T.click('#setupDone');
 
-L.outro("Well done. You can now test any USSD server in a few clicks. In the next video, we will make our own menu, without any code.",
+L.outro("Well done. You can now test any USSD server in a few clicks. In the next video, we will make our own menu on the Map. You just type in boxes and draw arrows. No code at all.",
   'Make your first menu');

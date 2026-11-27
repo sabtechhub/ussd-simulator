@@ -6,6 +6,31 @@ The page shows a phone with a dialer. Dial your short code and the simulator sen
 
 **Powered by SAB-TECH HUB**
 
+## Download the free app (Windows and Mac)
+
+| | |
+|---|---|
+| **Windows** | [USSD-Simulator-Setup.exe](https://github.com/sabtechhub/ussd-simulator/releases/latest/download/USSD-Simulator-Setup.exe) |
+| **Mac** (Intel and Apple chip) | [USSD-Simulator-mac.dmg](https://github.com/sabtechhub/ussd-simulator/releases/latest/download/USSD-Simulator-mac.dmg) |
+
+No XAMPP or PHP needed: install it and start building. The app also tests your own server, which the online version turns off for safety.
+
+- **Windows:** if a blue "Windows protected your PC" box appears, click **More info → Run anyway**. (The app is not code-signed yet.)
+- **Mac:** open the .dmg and drag the app into Applications. The first time, right-click the app and choose **Open**; or open **System Settings → Privacy & Security** and click **Open Anyway**.
+
+Try it online first: <https://sabtechhub.com/ussd-simulator/>
+
+### Build the app yourself
+
+```bash
+cd desktop
+npm install
+npm start            # run it
+npm run dist:win     # Windows installer in desktop/dist (build Mac with dist:mac on a Mac)
+```
+
+Publishing a GitHub release builds both installers automatically (`.github/workflows/desktop-app.yml`).
+
 ## Features
 
 - Phone UI with dialer keypad, USSD popup, reply field, Send / Cancel

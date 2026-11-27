@@ -207,8 +207,9 @@
         if (!startEl) {
           startEl = $(fromTarget); if (!startEl) return { kind: 'skip', end: true };
           from = [cx, cy];
+          // the target can be an element, a function returning an element, or a function returning a point {x, y}
           const toEl = typeof toTarget === 'string' || typeof toTarget === 'function' ? $(toTarget) : null;
-          to = toEl ? centerOf(toEl) : [cx + offset[0], cy + offset[1]];
+          to = toEl && typeof toEl.x === 'number' && !toEl.nodeType ? [toEl.x, toEl.y] : toEl ? centerOf(toEl) : [cx + offset[0], cy + offset[1]];
           clicks.push(videoMs);
           pe('pointerdown', cx, cy, startEl);
         }

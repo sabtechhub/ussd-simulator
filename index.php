@@ -6,6 +6,7 @@
  */
 const SAMPLE_FILES = ['hubtel' => 'sample-hubtel.php', 'nalo' => 'sample-nalo.php'];
 const GITHUB_URL = 'https://github.com/sabtechhub/ussd-simulator';
+const APP_URL = 'https://github.com/sabtechhub/ussd-simulator/releases/latest';   // free Windows and Mac app
 
 /*
  * Own computer or public website?
@@ -150,6 +151,11 @@ header span{color:var(--muted);font-size:13px}
 header{flex-wrap:wrap}
 header .brand{margin-left:auto;font-size:12px;padding:4px 10px;border:1px solid var(--line);border-radius:999px}
 header .brand b{color:var(--accent)}
+header .get-app{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:5px 12px;border-radius:999px;background:var(--accent2);color:#fff;text-decoration:none;white-space:nowrap}
+header .get-app:hover{filter:brightness(1.08)}
+header .get-app svg{width:14px;height:14px}
+@media(max-width:1100px){html:not(.desktop-app) header .brand{display:none}}
+.desktop-app header .get-app{display:none}
 footer{text-align:center;color:var(--muted);font-size:12px;padding:6px 16px 22px}
 footer b{color:var(--accent)}
 /* Test page: phone on the left, setup + activity on the right */
@@ -311,6 +317,35 @@ header .ttl span{font-size:12.5px}
 .guide .t-req{color:var(--req);font-weight:600}.guide .t-res{color:var(--res);font-weight:600}
 .guide .guide-next{margin:0}
 
+/* every screen clearly framed, coloured by its type: Menu blue, Question orange, End red */
+:root{--t-menu:#2563eb;--t-input:#d97706;--t-end:#dc2626}
+.node{border:2px solid color-mix(in srgb,var(--tc,var(--line)) 55%,var(--line));box-shadow:0 3px 10px rgba(15,23,42,.10)}
+.node.t-menu{--tc:var(--t-menu)}.node.t-input{--tc:var(--t-input)}.node.t-end{--tc:var(--t-end)}
+.node .node-h{background:color-mix(in srgb,var(--tc) 12%,var(--panel));border-bottom:1px solid color-mix(in srgb,var(--tc) 30%,var(--line));border-radius:8px 8px 0 0;padding-top:8px;padding-bottom:6px}
+.node .node-msg-in{margin-top:6px}
+.node.start{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent),0 3px 10px rgba(15,23,42,.10)}
+.node-name{min-width:70px}
+.scr{border:1.5px solid color-mix(in srgb,var(--tc,var(--line)) 40%,var(--line));border-left:6px solid var(--tc,var(--line));box-shadow:0 2px 8px rgba(15,23,42,.06);padding:0 0 12px;overflow:hidden}
+.scr.t-menu{--tc:var(--t-menu)}.scr.t-input{--tc:var(--t-input)}.scr.t-end{--tc:var(--t-end)}
+.scr > .sh{background:color-mix(in srgb,var(--tc) 10%,var(--panel));border-bottom:1px solid color-mix(in srgb,var(--tc) 25%,var(--line));padding:10px 12px;margin-bottom:4px}
+.scr > :not(.sh){margin-left:12px;margin-right:12px}
+.scr.start{border-color:var(--accent);border-left-color:var(--accent)}
+#screens{gap:18px}
+/* builder map view: map + settings panel */
+.map-row{display:flex;gap:14px;align-items:stretch}
+.map-row .map-scroll{flex:1;min-width:0}
+.map-panel{width:440px;flex-shrink:0;height:620px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel);display:flex;flex-direction:column}
+#tab-builder.full .map-panel{height:calc(100vh - 190px)}
+.map-panel-h{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
+.map-panel-h span{flex:1;font-family:ui-monospace,Consolas,monospace;color:var(--muted);font-size:12.5px;overflow:hidden;text-overflow:ellipsis}
+.map-panel .scr{border:0;border-radius:0;background:transparent;padding:12px}
+.map-panel .more > summary{display:none}
+.map-panel .more{border-top:0;margin-top:4px}
+.map-panel .rule-row{grid-template-columns:1fr 1fr;row-gap:4px}
+.map-panel .rule-row .arrow{display:none}
+.node-gear{background:none;border:0;color:var(--muted);cursor:pointer;padding:3px;border-radius:6px;display:flex}
+.node-gear:hover{color:var(--accent2);background:var(--btn-h)}
+@media(max-width:1000px){.map-row{flex-direction:column}.map-panel{width:auto;height:auto;max-height:520px}}
 /* builder map view */
 .view-seg{width:auto;padding:2px}
 .view-seg button{flex:none;padding:5px 12px;font-size:12px}
@@ -542,6 +577,7 @@ kbd{font:600 11px ui-monospace,Consolas,monospace;padding:1px 5px;border:1px sol
     <button data-v="builder" type="button" data-tip="Make your own USSD menu, then test it or get its PHP code"><span data-i="workflow"></span>Menu builder</button>
   </nav>
   <span class="brand">Powered by <b>SAB-TECH HUB</b></span>
+  <a class="get-app" id="getApp" href="<?= htmlspecialchars(APP_URL) ?>" target="_blank" rel="noopener" data-tip="Free app for Windows and Mac. It also tests your own server."><span data-i="download"></span>Get the app</a>
   <button class="theme-btn" id="themeBtn" type="button" data-tip="Switch between light and dark colours"></button>
 </header>
 
@@ -707,8 +743,8 @@ kbd{font:600 11px ui-monospace,Consolas,monospace;padding:1px 5px;border:1px sol
       </details>
       <span class="sp"></span>
       <div class="seg view-seg" id="bView">
+        <button data-v="map" type="button" data-tip="The easy way: your menu as boxes joined by arrows. Type in the boxes, drag a dot to link"><span data-i="workflow"></span>Map</button>
         <button data-v="list" type="button" data-tip="Edit screens one by one"><span data-i="list"></span>List</button>
-        <button data-v="map" type="button" data-tip="See screens as boxes with arrows; drag to arrange and link"><span data-i="workflow"></span>Map</button>
       </div>
       <button class="btn icon-only" id="bTidy" type="button" data-tip="Line the boxes up neatly" aria-label="Tidy up"><span data-i="grid"></span></button>
       <button class="btn icon-only" id="bFull" type="button" data-tip="Use the whole window for the map (Esc to close)" aria-label="Full screen"><span data-i="maximize"></span></button>
@@ -748,7 +784,8 @@ kbd{font:600 11px ui-monospace,Consolas,monospace;padding:1px 5px;border:1px sol
   </div>
 </div>
 
-<script>window.SIM = { ownComputer: <?= SIM_OWN_COMPUTER ? 'true' : 'false' ?>, github: <?= json_encode(GITHUB_URL) ?> };</script>
+<script>window.SIM = { ownComputer: <?= SIM_OWN_COMPUTER ? 'true' : 'false' ?>, github: <?= json_encode(GITHUB_URL) ?>, app: <?= json_encode(APP_URL) ?> };
+if (window.SIM_DESKTOP) document.documentElement.classList.add('desktop-app');</script>
 <script src="icons.js"></script>
 <script src="dialog.js"></script>
 <script src="samples.js"></script>
@@ -819,7 +856,7 @@ const SRC_NOTES = {
   url: 'Paste the callback URL you gave Hubtel or Nalo, then press Check.',
 };
 // on a public website, testing your own server only works after downloading the simulator
-const PUBLIC_URL_NOTE = '<span class="pub-note">Testing your own server works when you run the simulator on your own computer, for safety. <a href="' + SIM.github + '" target="_blank" rel="noopener">Download it free from GitHub</a>. Here you can still use the Demo and your builder menu.</span>';
+const PUBLIC_URL_NOTE = '<span class="pub-note">Testing your own server works in the free app for Windows and Mac, for safety. <a href="' + SIM.app + '" target="_blank" rel="noopener">Get the app</a>. Here you can still use the Demo and your builder menu.</span>';
 let src = read('src');
 { // older versions kept demo / builder in the URL box: move them to the new choice
   const ep = $('#endpoint').value.trim();

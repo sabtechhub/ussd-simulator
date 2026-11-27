@@ -563,7 +563,7 @@
 
   function renderScreen(s, i) {
     const isStart = flow.start === s.id;
-    const card = el('div', { class: 'scr' + (isStart ? ' start' : ''), 'data-id': s.id });
+    const card = el('div', { class: `scr t-${s.type}` + (isStart ? ' start' : ''), 'data-id': s.id });
 
     // --- header: name, type, delete ---
     const typeSel = el('select', { title: 'Screen type', onchange: e => {
@@ -676,9 +676,10 @@
   }
 
   /* ================= map view: draggable boxes + arrows ================= */
-  let view = 'list';
-  try { view = localStorage.getItem('ussdsim_bview') === 'map' ? 'map' : 'list'; } catch (e) {}
-  const NODE_W = 230;
+  let view = 'map';   // the Map is the main way to build; the List is the other way
+  let panelId = null; // screen whose settings panel is open beside the map
+  try { view = localStorage.getItem('ussdsim_bview') === 'list' ? 'list' : 'map'; } catch (e) {}
+  const NODE_W = 260;
 
   function render() {
     $('#screens').hidden = view !== 'list';
@@ -704,10 +705,11 @@
     const colY = {};
     order.forEach(id => {
       const s = screen(id), L = level[id];
-      const h = 78 + (s.type === 'menu' ? s.options.length * 26 : s.type === 'input' ? (1 + s.rules.length) * 26 : 0);
+      const shown = document.querySelector(`#bmap .node[data-id="${id}"]`);
+      const h = shown && shown.offsetHeight ? shown.offsetHeight : 110 + (s.type === 'menu' ? s.options.length * 30 + 30 : s.type === 'input' ? (1 + s.rules.length) * 30 + 30 : 30);
       colY[L] = colY[L] || 30;
       if (all || typeof s.x !== 'number' || typeof s.y !== 'number') { s.x = 30 + L * (NODE_W + 70); s.y = colY[L]; }
-      colY[L] += h + 28;
+      colY[L] += h + 36;
     });
   }
 
@@ -737,10 +739,14 @@
 
     flow.screens.forEach(s => canvas.append(renderNode(s)));
     scroller.append(canvas);
+    const row = el('div', { class: 'map-row' });
     scroller.addEventListener('contextmenu', e => mapContextMenu(e, canvas));
     scroller.addEventListener('pointerdown', e => { if (!e.target.closest('.node')) { selectedId = null; canvas.querySelectorAll('.node.sel').forEach(n => n.classList.remove('sel')); } });
-    wrap.append(scroller);
-    wrap.append(el('div', { class: 'map-help' }, 'Type straight into a box to change its name, message or options. Drag a box by its top bar to move it. Drag from a dot onto a box to link them, or onto empty space for a new screen. Right-click a box, an arrow or empty space for more.'));
+    row.append(scroller);
+    if (panelId && !screen(panelId)) panelId = null;
+    if (panelId) row.append(renderPanel(screen(panelId), canvas));
+    wrap.append(row);
+    wrap.append(el('div', { class: 'map-help' }, 'Click a box to see all its settings. Type straight into a box to change its name, message or options. Drag a box by its top bar to move it. Drag from a dot onto a box to link them, or onto empty space for a new screen. Right-click for more.'));
     sizeCanvas(canvas);
     drawLines(canvas);
     scroller.scrollLeft = sl; scroller.scrollTop = st;
@@ -778,7 +784,8 @@
         el('span', { class: 'grip' }, iconEl('grip', 14)),
         isStart ? el('span', { class: 'badge go' }, 'Start') : null,
         el('input', { class: 'node-name', value: s.id, title: 'Screen name', onchange: e => renameScreen(s, e.target.value), onkeydown: e => { if (e.key === 'Enter') e.target.blur(); } }),
-        typeSel),
+        typeSel,
+        el('button', { class: 'node-gear', type: 'button', title: 'All settings for this screen', onclick: () => openPanel(s.id) }, iconEl('settings', 14))),
       msg,
       (s.sets || []).filter(x => x.name).map(x => el('div', { class: 'node-set', title: 'Set when this screen opens (double-click the header to edit)' }, iconEl('variable', 12), `${x.name} = ${x.value}`)),
       rows,
@@ -787,10 +794,12 @@
         s.options.push({ key: nextKey, label: '', next: '' }); changed(true);
         setTimeout(() => { const n = document.querySelector(`#bmap .node[data-id="${s.id}"] .opt:last-of-type .nl`); if (n) n.focus(); });
       } }, iconEl('plus', 12), 'Option') : null,
-      s.type === 'input' ? el('button', { class: 'node-add', type: 'button', title: 'Answer checks, conditions and set values', onclick: () => editInList(s.id) }, iconEl('settings', 12), 'Conditions & more') : null,
+      s.type === 'input' ? el('button', { class: 'node-add', type: 'button', title: 'Answer checks, conditions and set values', onclick: () => openPanel(s.id) }, iconEl('settings', 12), 'Checks & conditions') : null,
       s.type === 'end' ? el('div', { class: 'node-end' }, 'Session ends') : null);
     node.addEventListener('pointerdown', e => startDrag(e, s, node));
-    node.querySelector('.node-h').addEventListener('dblclick', e => { if (!e.target.closest('input,select')) editInList(s.id); });
+    node.querySelector('.node-h').addEventListener('dblclick', e => { if (!e.target.closest('input,select')) openPanel(s.id); });
+    // typing in the box keeps the open panel up to date
+    node.addEventListener('input', () => { if (panelId === s.id) setTimeout(() => refreshPanel(), 0); });
     setTimeout(() => grow(msg));
     return node;
   }
@@ -865,6 +874,7 @@
       node.removeEventListener('pointermove', move); node.removeEventListener('pointerup', up);
       node.classList.remove('dragging');
       if (moved) { sizeCanvas(canvas); drawLines(canvas); changed(false); }
+      else if (panelId !== s.id) openPanel(s.id);
     };
     node.addEventListener('pointermove', move); node.addEventListener('pointerup', up);
   }
@@ -963,7 +973,7 @@
       const s = screen(node.dataset.id); if (!s) return;
       selectedId = s.id; canvas.querySelectorAll('.node.sel').forEach(n => n.classList.remove('sel')); node.classList.add('sel');
       const items = [
-        { label: 'Edit', run: () => editInList(s.id) },
+        { label: 'Edit all settings', run: () => openPanel(s.id) },
         flow.start === s.id ? null : { label: 'Show this first (start)', run: () => { flow.start = s.id; changed(true); } },
         { label: 'Duplicate', run: () => { const c2 = clone(s); c2.id = uniqueId(s.id + '_copy'); c2.x = s.x + 30; c2.y = s.y + 30; flow.screens.push(c2); changed(true); } },
         '-',
@@ -991,6 +1001,13 @@
     s.sets.push({ name: '', value: '' });
     openMore.add(s.id);
     changed(false);
+    if (view === 'map') {
+      openPanel(s.id);
+      const rows = document.querySelectorAll('#bmap .map-panel .set-row');
+      const name = rows.length ? rows[rows.length - 1].querySelector('input') : null;
+      if (name) name.focus();
+      return;
+    }
     setView('list');
     const card = document.querySelector(`#screens .scr[data-id="${s.id}"]`);
     if (!card) return;
@@ -1049,6 +1066,40 @@
     draw();
     document.body.append(back);
     setTimeout(() => { back.classList.add('show'); search.focus(); }, 10);
+  }
+
+  /** The settings panel beside the map: the same full editor as the List, for one screen. */
+  function renderPanel(s, canvas) {
+    const idx = flow.screens.indexOf(s);
+    openMore.add(s.id);   // show every setting straight away
+    const panel = el('aside', { class: 'map-panel', 'data-id': s.id },
+      el('div', { class: 'map-panel-h' },
+        el('b', {}, 'Settings'),
+        el('span', {}, s.id),
+        el('button', { class: 'btn icon', type: 'button', title: 'Close settings', onclick: () => { panelId = null; render(); } }, iconEl('x'))),
+      renderScreen(s, idx));
+    // typing in the panel updates the box on the map straight away
+    panel.addEventListener('input', () => setTimeout(() => {
+      const old = canvas.querySelector(`.node[data-id="${s.id}"]`);
+      if (!old || !screen(s.id)) return;
+      old.replaceWith(renderNode(screen(s.id)));
+      sizeCanvas(canvas); drawLines(canvas);
+    }, 0));
+    return panel;
+  }
+  function openPanel(id) {
+    panelId = id; selectedId = id;
+    if (view !== 'map') { setView('map'); return; }
+    render();
+  }
+  /** redraw only the panel (keeps the map where it is) */
+  function refreshPanel() {
+    const old = document.querySelector('#bmap .map-panel');
+    const canvas = document.querySelector('#bmap .map-canvas');
+    if (!old || !panelId || !screen(panelId) || !canvas) return;
+    const fresh = renderPanel(screen(panelId), canvas);
+    fresh.scrollTop = old.scrollTop;
+    old.replaceWith(fresh);
   }
 
   /** Jump from the map to the screen's full editor in the list. */

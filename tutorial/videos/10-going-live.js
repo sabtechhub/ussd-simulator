@@ -12,7 +12,11 @@ T.say("If you have a developer, you can share this video with them. They will do
 
 L.section('Step 1', 'Get the code', "Step one. Get the code.");
 L.page('builder');
-T.say("First, check there are no red warnings on your screens.");
+L.onMap();
+L.tidy();
+T.say("First, look over your menu on the Map one last time. Follow the arrows, and check that every option goes somewhere.");
+T.move(L.N('main'), 800).wait(300).move(L.N('balance'), 600).wait(300).move(L.N('amount'), 600).wait(300).move(L.N('bye'), 600);
+T.say("An empty dot means an option goes nowhere. And a box with a red warning needs fixing. Our menu is fine.");
 T.say("Then press, Get PHP code.");
 T.click('#bGen').sleep(400).wait(900);
 T.say("The simulator writes the code for you. PHP is a language that almost every website host understands.");
