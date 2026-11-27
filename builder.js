@@ -375,8 +375,8 @@
     if (screen(newId)) { alert(`A screen called "${newId}" already exists.`); return render(); }
     const old = s.id;
     flow.screens.forEach(x => {
-      x.options.forEach(o => { if (o.next === old) o.next = newId; });
-      x.rules.forEach(r => { if (r.next === old) r.next = newId; });
+      (x.options || []).forEach(o => { if (o.next === old) o.next = newId; });
+      (x.rules || []).forEach(r => { if (r.next === old) r.next = newId; });
       if (x.next === old) x.next = newId;
     });
     if (flow.start === old) flow.start = newId;

@@ -14,7 +14,8 @@ The page shows a phone with a dialer. Dial your short code and the simulator sen
 - Network selection: MTN, Telecel (Vodafone), AirtelTigo
 - Request / response log with colored JSON, copy per entry and copy all
 - Sample PHP endpoint code for Hubtel and Nalo (view and copy) to start your own endpoint
-- Built-in demo endpoint (`mock.php`) to try it out
+- Beginner friendly: plain-language steps, a "New to USSD?" guide, and a Demo menu that works straight away
+- Choose what to test: **Demo**, **My builder menu** or **My server** (with a **Check** button that tells you if your server answers correctly)
 - Optional extra headers (e.g. `Authorization`) and an option to ignore SSL errors
 - **Menu builder**: design your own USSD menus, inputs and conditions, test them on the phone, then generate the PHP endpoint
 - Light and dark theme
@@ -45,7 +46,9 @@ php -S localhost:8090
 
 Then open http://localhost:8090.
 
-Click **Use demo endpoint** to try it straight away. The demo is answered inside the same PHP process, so it works on the built-in server as well as on Apache.
+The page opens on the **Demo** menu, so you can press the green button and try it straight away. To test your own server, choose **My server**, paste its URL and press **Check**.
+
+> PHP's built-in server handles one request at a time, so it cannot call another page on the same server. Run your own endpoint on a different port (e.g. `php -S localhost:8091`) or use XAMPP/Apache.
 
 ## How it works
 

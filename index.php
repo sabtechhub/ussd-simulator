@@ -39,6 +39,13 @@ if (isset($_GET['proxy'])) {
         echo json_encode(['status' => 200, 'time_ms' => round((microtime(true) - $t) * 1000), 'body' => $body, 'error' => null]);
         exit;
     }
+    // PHP's built-in server (php -S) handles one request at a time, so it can never answer
+    // a call to itself. Say so straight away instead of waiting for a timeout.
+    if ($target === $selfHost && PHP_SAPI === 'cli-server') {
+        echo json_encode(['error' => "This page is running on PHP's built-in server, which can't call itself. "
+            . 'Run your USSD endpoint on another port (e.g. php -S localhost:8091) or use XAMPP/Apache.']);
+        exit;
+    }
     $headers = ['Content-Type: application/json', 'Accept: application/json'];
     foreach (preg_split('/\r?\n/', $in['headers'] ?? '') as $h) {
         if (strpos($h, ':') !== false) $headers[] = trim($h);
@@ -51,7 +58,8 @@ if (isset($_GET['proxy'])) {
             CURLOPT_POSTFIELDS => $payload,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_TIMEOUT => 30,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT => 20,
             CURLOPT_FOLLOWLOCATION => true,
         ]);
         if (!empty($in['insecure'])) {
@@ -63,7 +71,7 @@ if (isset($_GET['proxy'])) {
         $code = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
     } else {
         $ctx = stream_context_create([
-            'http' => ['method' => 'POST', 'header' => implode("\r\n", $headers), 'content' => $payload, 'timeout' => 30, 'ignore_errors' => true],
+            'http' => ['method' => 'POST', 'header' => implode("\r\n", $headers), 'content' => $payload, 'timeout' => 20, 'ignore_errors' => true],
             'ssl' => ['verify_peer' => empty($in['insecure']), 'verify_peer_name' => empty($in['insecure'])],
         ]);
         $body = @file_get_contents($url, false, $ctx);
@@ -134,7 +142,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent2);outline
 .screen{position:relative;height:660px;background:linear-gradient(#f8fafc,#eef2f7);border-radius:32px;overflow:hidden;color:#0f172a;display:flex;flex-direction:column}
 .status{display:flex;justify-content:space-between;padding:10px 22px 4px;font-size:11px;font-weight:600}
 .status span{max-width:95px;white-space:nowrap;overflow:hidden}
-.notch{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:90px;height:22px;background:#05070d;border-radius:12px}
+.notch{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:13px;height:13px;background:#05070d;border-radius:50%}
 .display{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding:10px 18px}
 .display .num{font-size:32px;font-weight:300;letter-spacing:1px;min-height:44px;word-break:break-all;text-align:center}
 .display .sub{font-size:12px;color:#64748b;min-height:18px}
@@ -180,6 +188,53 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent2);outline
 .log .top .btns{display:flex;gap:8px;flex-wrap:wrap}
 .entry.req .h{color:var(--req)}.entry.res .h{color:var(--res)}.entry.err .h{color:var(--err)}
 .entry pre{margin:0;padding:10px;font:12px/1.4 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-all;color:var(--code-text);background:var(--code-bg)}
+/* header */
+header{background:var(--panel);gap:12px;padding:12px 20px}
+header .logo{width:40px;height:40px;border-radius:8px;background:var(--accent2);color:#fff;font-weight:800;font-size:13px;letter-spacing:.5px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+header .ttl{display:flex;flex-direction:column;line-height:1.25}
+header .ttl h1{font-size:16px;font-weight:700}
+header .ttl span{font-size:12.5px}
+
+/* settings */
+.settings{display:flex;flex-direction:column;gap:16px}
+.grp-h{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;margin-bottom:6px}
+.grp-h .n{width:22px;height:22px;border-radius:50%;background:var(--accent2);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.help{font-size:12px;color:var(--muted);margin:-2px 0 8px 30px}
+.seg.src button{font-size:12px;padding:8px 4px;white-space:nowrap}
+.url-row{display:flex;gap:6px;margin-top:8px}
+.url-row input{flex:1}
+.src-note{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.45}
+.good{color:var(--res);font-weight:700}.bad{color:var(--err);font-weight:700}
+.adv{border-top:1px solid var(--line);padding-top:10px}
+.adv summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--muted)}
+.adv summary small{font-weight:400}
+.settings .hint{margin:0}
+.link{background:none;border:0;padding:0;color:var(--accent2);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+
+/* phone extras */
+.phone-col{display:flex;flex-direction:column;align-items:center}
+.status{align-items:center;padding:12px 24px 4px}
+.sb-right{display:flex;align-items:center;gap:5px;max-width:none !important}
+.display .sub b{color:#0f172a}
+.phone-bar{display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:14px}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:999px;font-size:12.5px;font-weight:600;background:var(--panel);border:1px solid var(--line);color:var(--muted)}
+.pill i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.pill.busy i{background:#f59e0b;animation:blink 1s infinite}.pill.busy{color:#d97706}
+.pill.live i{background:var(--accent);animation:blink 1.4s infinite}.pill.live{color:var(--res)}
+.pill.done i{background:var(--accent2)}.pill.done{color:var(--accent2)}
+.pill.error i{background:var(--danger)}.pill.error{color:var(--err)}
+@keyframes blink{50%{opacity:.35}}
+.meta{margin-top:0}
+
+/* activity guide */
+.top-hint{font-size:12px;color:var(--muted)}
+.guide{text-align:left;padding:18px 20px;border-style:solid;background:var(--sub);color:var(--text)}
+.guide h3{margin:0 0 6px;font-size:15px}
+.guide p{margin:0 0 10px;color:var(--muted)}
+.guide ol{margin:0 0 12px;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.guide .t-req{color:var(--req);font-weight:600}.guide .t-res{color:var(--res);font-weight:600}
+.guide .guide-next{margin:0}
+
 /* tabs + builder */
 .tabs{margin-bottom:12px}
 .btn.primary{background:var(--accent2);border-color:var(--accent2);color:#fff;font-weight:600}
@@ -232,53 +287,87 @@ code{background:var(--field);border:1px solid var(--line);border-radius:4px;padd
 </style>
 </head>
 <body>
-<header><h1>📱 SAB-TECH HUB USSD Simulator</h1><span>Hubtel &amp; Nalo — test your USSD endpoint without a phone</span><span class="brand">Powered by <b>SAB-TECH HUB</b></span><button class="theme-btn" id="themeBtn" type="button" title="Switch light / dark theme">☀️ Light</button></header>
+<header>
+  <div class="logo" aria-hidden="true">SAB</div>
+  <div class="ttl">
+    <h1>SAB-TECH HUB USSD Simulator</h1>
+    <span>Test Hubtel &amp; Nalo USSD menus without a phone</span>
+  </div>
+  <span class="brand">Powered by <b>SAB-TECH HUB</b></span>
+  <button class="theme-btn" id="themeBtn" type="button" title="Switch light / dark theme">Light mode</button>
+</header>
 
 <div class="wrap">
   <!-- settings -->
-  <section class="card">
-    <h2>Settings</h2>
-    <label>Gateway format</label>
-    <div class="seg" id="provSeg">
-      <button data-v="hubtel">Hubtel</button>
-      <button data-v="nalo">Nalo</button>
+  <section class="card settings">
+    <div class="grp">
+      <div class="grp-h"><span class="n">1</span>Your USSD provider</div>
+      <p class="help">The company that connects your service to the phone networks. Not sure? Keep Hubtel.</p>
+      <div class="seg" id="provSeg">
+        <button data-v="hubtel">Hubtel</button>
+        <button data-v="nalo">Nalo</button>
+      </div>
     </div>
 
-    <label for="endpoint">USSD endpoint URL</label>
-    <input id="endpoint" placeholder="https://yourdomain.com/ussd/callback" title="Your endpoint URL, or builder:flow to run the menu builder flow">
-    <div class="row" style="margin-top:6px"><button class="btn" id="demoBtn" type="button" title="Built-in demo that understands both Hubtel and Nalo">Use demo endpoint</button></div>
-
-    <div class="row">
-      <div><label for="msisdn">Phone number</label><input id="msisdn" value="233241234567"></div>
-      <div><label for="operator">Network</label>
-        <select id="operator">
-          <option value="mtn">MTN</option>
-          <option value="telecel">Telecel (Vodafone)</option>
-          <option value="airteltigo">AirtelTigo</option>
-        </select></div>
+    <div class="grp">
+      <div class="grp-h"><span class="n">2</span>Which menu to test</div>
+      <div class="seg src" id="srcSeg">
+        <button data-v="demo" title="A ready-made test menu">Demo</button>
+        <button data-v="builder" title="The menu you make in the Menu builder tab">My builder menu</button>
+        <button data-v="url" title="Your own USSD server">My server</button>
+      </div>
+      <div id="srcUrl">
+        <div class="url-row">
+          <input id="endpoint" placeholder="https://yourdomain.com/ussd" aria-label="Your USSD endpoint URL">
+          <button class="btn" id="checkBtn" type="button" title="Send one test dial to this URL">Check</button>
+        </div>
+      </div>
+      <div class="src-note" id="srcNote"></div>
     </div>
 
-    <label for="code">Default short code</label>
-    <input id="code" value="*713#">
-
-    <div id="naloOnly">
-      <label for="userid">Nalo USERID</label>
-      <input id="userid" value="NALOTest">
+    <div class="grp">
+      <div class="grp-h"><span class="n">3</span>Test phone</div>
+      <p class="help">Pretend you are a customer with this phone.</p>
+      <div class="row">
+        <div><label for="msisdn">Phone number</label><input id="msisdn" value="233241234567"></div>
+        <div><label for="operator">Network</label>
+          <select id="operator">
+            <option value="mtn">MTN</option>
+            <option value="telecel">Telecel (Vodafone)</option>
+            <option value="airteltigo">AirtelTigo</option>
+          </select></div>
+      </div>
+      <label for="code">Code to dial (your short code)</label>
+      <input id="code" value="*713#">
     </div>
 
-    <label for="headers">Extra headers (optional, one per line)</label>
-    <textarea id="headers" placeholder="Authorization: Bearer xyz"></textarea>
+    <details class="adv" id="advBox">
+      <summary>Advanced settings <small>(you can skip this)</small></summary>
+      <div id="naloOnly">
+        <label for="userid">Nalo USERID</label>
+        <input id="userid" value="NALOTest">
+      </div>
+      <label for="headers">Extra headers (one per line)</label>
+      <textarea id="headers" placeholder="Authorization: Bearer xyz"></textarea>
+      <label class="chk"><input type="checkbox" id="insecure"> Ignore SSL certificate errors</label>
+    </details>
 
-    <label class="chk"><input type="checkbox" id="insecure"> Ignore SSL certificate errors</label>
-    <p class="hint">Tap the green call button to dial. Keyboard works too: digits, <b>*</b>, <b>#</b>, Enter, Backspace, Esc.</p>
+    <p class="hint">Your keyboard works too: digits, <b>*</b>, <b>#</b>, <b>Enter</b> to dial or send, <b>Esc</b> to cancel.</p>
   </section>
 
   <!-- phone -->
-  <section>
+  <section class="phone-col">
     <div class="phone">
       <div class="screen">
         <div class="notch"></div>
-        <div class="status"><span id="clock">12:00</span><span id="netName">MTN GH ▂▄▆█</span></div>
+        <div class="status">
+          <span id="clock">12:00</span>
+          <span class="sb-right">
+            <span id="netName">MTN GH</span>
+            <svg width="16" height="11" viewBox="0 0 16 11" aria-hidden="true"><rect x="0" y="8" width="3" height="3" rx=".6" fill="currentColor"/><rect x="4.3" y="5.5" width="3" height="5.5" rx=".6" fill="currentColor"/><rect x="8.6" y="3" width="3" height="8" rx=".6" fill="currentColor"/><rect x="12.9" y="0" width="3" height="11" rx=".6" fill="currentColor"/></svg>
+            <svg width="22" height="11" viewBox="0 0 22 11" aria-hidden="true"><rect x=".5" y=".5" width="18" height="10" rx="2.5" fill="none" stroke="currentColor"/><rect x="2" y="2" width="13" height="7" rx="1.3" fill="currentColor"/><rect x="19.5" y="3.5" width="2" height="4" rx="1" fill="currentColor"/></svg>
+          </span>
+        </div>
         <div class="display">
           <div class="num" id="num"></div>
           <div class="sub" id="sub">Dial a USSD code</div>
@@ -307,24 +396,39 @@ code{background:var(--field);border:1px solid var(--line);border-radius:4px;padd
         </div>
       </div>
     </div>
-    <div class="meta" id="meta"></div>
+    <div class="phone-bar">
+      <span class="pill" id="pill"><i></i><span id="pillText">Ready</span></span>
+      <span class="meta" id="meta"></span>
+    </div>
   </section>
 
   <!-- log -->
   <section class="card log">
     <div class="seg tabs" id="mainTabs">
-      <button data-v="log">Request / Response log</button>
+      <button data-v="log">Activity</button>
       <button data-v="builder">Menu builder</button>
     </div>
 
     <div id="tab-log">
       <div class="top">
+        <span class="top-hint">Every message between the phone and the menu</span>
         <div class="btns">
           <button class="btn" id="viewSample" title="View and copy a starter PHP endpoint">Sample PHP code</button>
           <button class="btn" id="copyAll">Copy all</button>
           <button class="btn" id="clearLog">Clear</button>
         </div></div>
-      <div id="logs"><div class="empty">Requests sent to your endpoint and its responses will appear here.</div></div>
+      <div id="logs">
+        <div class="empty guide">
+          <h3>New to USSD?</h3>
+          <p>USSD is the menu that pops up when you dial a code like <b>*713#</b> on any phone. It works without internet or apps.</p>
+          <ol>
+            <li>Press the green <b>call</b> button on the phone.</li>
+            <li>A menu pops up. Type a number and press <b>SEND</b>.</li>
+            <li>Each step shows up here: <span class="t-req">→ what the phone sent</span> and <span class="t-res">← what came back</span>.</li>
+          </ol>
+          <p class="guide-next">Ready to make your own menu? <button class="link" type="button" data-goto="builder">Open the Menu builder →</button></p>
+        </div>
+      </div>
     </div>
 
     <div id="tab-builder" hidden>
@@ -376,7 +480,7 @@ $('#yr').textContent = new Date().getFullYear();
 /* ---------- theme ---------- */
 function applyTheme(t){
   document.documentElement.setAttribute('data-theme', t);
-  $('#themeBtn').textContent = t === 'dark' ? '☀️ Light' : '🌙 Dark';
+  $('#themeBtn').textContent = t === 'dark' ? 'Light mode' : 'Dark mode';
 }
 applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
 $('#themeBtn').onclick = () => {
@@ -402,14 +506,57 @@ function setProvider(p){
   $('#naloOnly').style.display = p === 'nalo' ? '' : 'none';
 }
 const BASE_URL = location.href.split('?')[0].split('#')[0].replace(/[^/]*$/, '');
-function setEndpoint(file){
-  $('#endpoint').value = BASE_URL + file; store('endpoint', $('#endpoint').value);
-  const ep = $('#endpoint'); ep.style.outline = '2px solid var(--accent)'; setTimeout(() => ep.style.outline = '', 900);
+/* ---------- which menu to test: demo / builder / own server ---------- */
+const SRC_NOTES = {
+  demo: 'A ready-made test menu. Press the green button on the phone to try it.',
+  builder: 'Runs the menu you make in the <button class="link" type="button" data-goto="builder">Menu builder</button> tab.',
+  url: 'The address of your own USSD server (the callback URL you gave Hubtel or Nalo).',
+};
+let src = read('src');
+{ // older versions kept demo / builder in the URL box: move them to the new choice
+  const ep = $('#endpoint').value.trim();
+  if (ep === Flow.ENDPOINT || /\/mock\.php$/.test(ep)) { if (!src) src = ep === Flow.ENDPOINT ? 'builder' : 'demo'; $('#endpoint').value = ''; store('endpoint', ''); }
+  if (!src) src = ep ? 'url' : 'demo';   // first visit: start with the demo
 }
-$('#demoBtn').onclick = () => setEndpoint('mock.php');
+function setSrc(v){
+  src = v; store('src', v);
+  document.querySelectorAll('#srcSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  $('#srcUrl').hidden = v !== 'url';
+  $('#srcNote').innerHTML = SRC_NOTES[v];
+  $('#checkNote') && ($('#checkNote').textContent = '');
+  if (v === 'url' && !$('#endpoint').value.trim()) setTimeout(() => $('#endpoint').focus(), 0);
+}
+$('#srcSeg').onclick = e => { const b = e.target.closest('button'); if (b) setSrc(b.dataset.v); };
+/** The address requests go to for the current choice. */
+function endpointUrl(){ return src === 'url' ? $('#endpoint').value.trim() : src === 'demo' ? BASE_URL + 'mock.php' : Flow.ENDPOINT; }
+setSrc(src);
+
+// "Check" sends one test dial to the user's own server and says whether it answered properly
+$('#checkBtn').onclick = async () => {
+  const url = $('#endpoint').value.trim(), note = $('#srcNote');
+  if (!url) { $('#endpoint').focus(); return; }
+  note.textContent = 'Checking…';
+  const payload = provider === 'hubtel'
+    ? { Type: 'Initiation', Mobile: $('#msisdn').value.trim(), SessionId: 'check' + Date.now(), ServiceCode: serviceCodeOf($('#code').value), Message: $('#code').value.trim(), Operator: OPS[$('#operator').value][0], Sequence: 1, ClientState: '', Platform: 'USSD' }
+    : { USERID: $('#userid').value.trim(), MSISDN: $('#msisdn').value.trim(), USERDATA: $('#code').value.trim(), MSGTYPE: true, NETWORK: OPS[$('#operator').value][1], SESSIONID: 'check' + Date.now() };
+  try {
+    const r = await (await fetch('?proxy=1', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, payload, insecure: $('#insecure').checked, headers: $('#headers').value }) })).json();
+    if (r.error) { note.innerHTML = '<span class="bad">✕ Could not reach it:</span> ' + escapeHtml(r.error); return; }
+    if (r.status >= 400) { note.innerHTML = `<span class="bad">✕ Your server answered with an error (HTTP ${r.status}).</span>`; return; }
+    let j = null; try { j = JSON.parse(r.body); } catch (e) {}
+    const msg = j && (provider === 'hubtel' ? getKey(j, 'Message') : getKey(j, 'MSG'));
+    if (msg === undefined || msg === null) { note.innerHTML = `<span class="bad">⚠ It answered (${r.time_ms} ms) but not in ${provider === 'hubtel' ? 'Hubtel' : 'Nalo'} format.</span> Look at "Sample PHP code" for the expected reply.`; return; }
+    note.innerHTML = `<span class="good">✓ Works!</span> Answered in ${r.time_ms} ms. Press the green button to try it.`;
+  } catch (e) { note.innerHTML = '<span class="bad">✕ ' + escapeHtml(String(e)) + '</span>'; }
+};
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+// links that open a tab, e.g. "Open the Menu builder"
+document.addEventListener('click', e => { const g = e.target.closest('[data-goto]'); if (g) setTab(g.dataset.goto); });
+
 function updateNet(){
   const n = {mtn:'MTN GH', telecel:'Telecel GH', airteltigo:'AT GH'}[$('#operator').value];
-  $('#netName').textContent = n + ' ▂▄▆█';
+  $('#netName').textContent = n;
 }
 updateNet();
 $('#operator').addEventListener('change', () => { store('operator', $('#operator').value); updateNet(); });
@@ -425,7 +572,7 @@ function press(k){
   if (dialogOpen()) { const r = $('#reply'); if (r.style.display !== 'none') { r.value += k; r.focus(); } return; }
   dialStr += k; renderDial();
 }
-function renderDial(){ $('#num').textContent = dialStr; $('#sub').textContent = dialStr ? '' : 'Dial a USSD code (default ' + $('#code').value + ')'; }
+function renderDial(){ $('#num').textContent = dialStr; $('#sub').innerHTML = dialStr ? '' : 'Press the green button to dial <b>' + escapeHtml($('#code').value || '*713#') + '</b>'; }
 renderDial();
 $('#delBtn').onclick = () => { dialStr = dialStr.slice(0,-1); renderDial(); };
 $('#callBtn').onclick = () => dial();
@@ -507,7 +654,7 @@ function parseResponse(raw){
 async function send(kind, text){
   const payload = buildPayload(kind, text);
   addLog('req', `→ ${S.provider.toUpperCase()} ${kind === 'start' ? 'initiation' : kind}  · step ${S.seq}`, JSON.stringify(payload, null, 2));
-  if ($('#endpoint').value.trim() === Flow.ENDPOINT) {
+  if (endpointUrl() === Flow.ENDPOINT) {
     // Answered by the menu builder flow in this page, same rules as the generated PHP
     const body = JSON.stringify(Flow.respond(payload, S.provider));
     addLog('res', '← Menu builder flow', JSON.stringify(JSON.parse(body), null, 2));
@@ -515,7 +662,7 @@ async function send(kind, text){
   }
   try {
     const r = await fetch('?proxy=1', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ url: $('#endpoint').value.trim(), payload, insecure: $('#insecure').checked, headers: $('#headers').value }) });
+      body: JSON.stringify({ url: endpointUrl(), payload, insecure: $('#insecure').checked, headers: $('#headers').value }) });
     const j = await r.json();
     if (j.error) addLog('err', `✕ Error${j.time_ms !== undefined ? ' · ' + j.time_ms + ' ms' : ''}`, j.error);
     else {
@@ -530,21 +677,37 @@ async function send(kind, text){
 }
 
 function handle(res){
-  if (res.error) { S.active = false; showDialog('Connection problem or invalid MMI code.\n\n' + res.error, true); return; }
-  if (res.status >= 400) { S.active = false; showDialog(`Endpoint returned HTTP ${res.status}.\n\n` + String(res.body || '').slice(0, 300), true); return; }
+  if (res.error) { S.active = false; showDialog('Connection problem or invalid MMI code.\n\n' + res.error, true); updateMeta('error'); return; }
+  if (res.status >= 400) { S.active = false; showDialog(`Endpoint returned HTTP ${res.status}.\n\n` + String(res.body || '').slice(0, 300), true); updateMeta('error'); return; }
   const p = parseResponse(res.body);
   if (p.clientState !== undefined && p.clientState !== null) S.clientState = String(p.clientState);
   if (p.end) S.active = false;
   showDialog(p.msg, p.end);
-  updateMeta(p.end ? 'session ended' : 'waiting for input');
+  updateMeta(p.bad ? 'error' : p.end ? 'session ended' : 'waiting for input');
 }
 
+/* status pill under the phone */
+const PILL = {
+  'starting':          ['busy', 'Dialing…'],
+  'waiting for input': ['live', 'Waiting for your reply'],
+  'session ended':     ['done', 'Session finished'],
+  'cancelled by user': ['idle', 'Cancelled'],
+  'error':             ['error', 'Something went wrong — see Activity'],
+};
+function setPill(kind, text){ $('#pill').className = 'pill ' + kind; $('#pillText').textContent = text; }
 function updateMeta(state){
-  $('#meta').textContent = S.sessionId ? `Session ${S.sessionId.slice(0,10)}… · step ${S.seq} · ${state}` : '';
+  const p = PILL[state]; if (p) setPill(p[0], p[1]);
+  $('#meta').textContent = S.sessionId ? `Step ${S.seq} · session ${S.sessionId.slice(0,6)}` : '';
 }
 
 async function dial(){
-  if (!$('#endpoint').value.trim()) { alert('Enter your USSD endpoint URL first (or click "Use demo endpoint").'); $('#endpoint').focus(); return; }
+  if (!endpointUrl()) { setPill('error', 'Add your server address first'); $('#endpoint').focus(); return; }
+  if (src === 'builder' && Flow.flow.screens.every(s => !s.text.trim() && !(s.options || []).some(o => o.label.trim()))) {
+    setPill('error', 'Your builder menu is empty — write a message first');
+    setTab('builder');
+    const t = document.querySelector('#screens textarea'); if (t) t.focus();
+    return;
+  }
   let code = dialStr || $('#code').value.trim();
   if (!code) return;
   if (!code.endsWith('#')) code += '#';
@@ -590,7 +753,8 @@ function addLog(cls, title, body){
   else pre.textContent = body;
   d.append(h, pre); logs.appendChild(d); logs.scrollTop = logs.scrollHeight;
 }
-$('#clearLog').onclick = () => { $('#logs').innerHTML = '<div class="empty">Log cleared.</div>'; };
+const GUIDE_HTML = $('#logs').innerHTML;
+$('#clearLog').onclick = () => { $('#logs').innerHTML = GUIDE_HTML; };
 $('#copyAll').onclick = e => {
   const txt = [...document.querySelectorAll('#logs .entry')].map(en =>
     en.querySelector('.h span').textContent + '  [' + en.querySelector('.r span').textContent + ']\n' + en.querySelector('pre').textContent).join('\n\n');
@@ -647,12 +811,13 @@ function setTab(t){
 }
 $('#mainTabs').onclick = e => { const b = e.target.closest('button'); if (b) setTab(b.dataset.v); };
 Flow.init();
+$("#code").addEventListener("input", () => { if (!S.active) renderDial(); });
 document.querySelectorAll(".file-pop .btn").forEach(b => b.addEventListener("click", () => b.closest("details").open = false));
 setTab(read('tab') === 'builder' ? 'builder' : 'log');
 $('#bRun').onclick = () => {
   const p = Flow.problems();
   if (p.length && !confirm('Some screens are not finished:\n\n' + p.map(x => `• ${x[0]}: ${x[1]}`).join('\n') + '\n\nRun anyway?')) return;
-  $('#endpoint').value = Flow.ENDPOINT; store('endpoint', Flow.ENDPOINT);
+  setSrc('builder');
   if (S.active) cancel();
   dialStr = ''; renderDial();
   dial();
