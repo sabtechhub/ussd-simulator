@@ -204,7 +204,8 @@ code{background:var(--field);border:1px solid var(--line);border-radius:4px;padd
 .grid-row{display:grid;gap:6px;align-items:center;margin-bottom:6px}
 .opt-row{grid-template-columns:52px 1fr 20px minmax(110px,.8fr) 30px}
 .rule-row{grid-template-columns:minmax(70px,.8fr) 96px minmax(56px,.6fr) 16px minmax(96px,.8fr) 30px}
-.then-row{grid-template-columns:auto minmax(140px,260px);justify-content:start;margin-top:8px}
+.col-h{margin:10px 0 2px}.col-h span{font-size:11px;color:var(--muted);font-weight:600}
+.then-row{grid-template-columns:auto minmax(140px,380px);justify-content:start;margin-top:8px}
 .more{margin-top:8px}
 .more summary{cursor:pointer;font-size:12px;color:var(--muted);width:max-content;list-style:none;padding:2px 0}
 .more summary::-webkit-details-marker{display:none}

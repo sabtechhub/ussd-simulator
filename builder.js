@@ -353,10 +353,26 @@
     clearTimeout(saveTimer); saveTimer = setTimeout(save, 250);
     if (rerender) render();
   }
-  function screenSelect(value, onchange, allowEmpty) {
-    const s = el('select', { class: 'nx', onchange: e => onchange(e.target.value) },
-      el('option', { value: '' }, allowEmpty || '— choose screen —'),
-      flow.screens.map(x => el('option', { value: x.id }, x.id)));
+  /** How a screen is named in the "goes to" lists: name plus the start of its message. */
+  function screenLabel(x) {
+    let msg = (x.text || '').split('\n')[0].trim();
+    if (msg.length > 24) msg = msg.slice(0, 23) + '…';
+    return x.id + (msg ? ` — "${msg}"` : ' — (no message yet)') + (x.type === 'end' ? '  · ends' : '');
+  }
+  /** Dropdown to pick the screen to go to next; last choice creates a new screen. */
+  function screenSelect(value, onchange) {
+    const s = el('select', { class: 'nx', title: 'The screen the user sees next', onchange: e => {
+      if (e.target.value !== '__new__') return onchange(e.target.value);
+      const id = uniqueId('new_screen');
+      flow.screens.push({ id, type: 'end', text: '', saveAs: '', options: [], rules: [], validate: 'any', error: '', next: '' });
+      onchange(id);
+      changed(true);
+      const card = document.querySelector(`.scr[data-id="${id}"]`);
+      if (card) { card.scrollIntoView({ block: 'nearest' }); card.querySelector('textarea').focus(); }
+    } },
+      el('option', { value: '' }, '— pick the next screen —'),
+      flow.screens.map(x => el('option', { value: x.id }, screenLabel(x))),
+      el('option', { value: '__new__' }, '+ New screen…'));
     s.value = value || '';
     return s;
   }
@@ -407,11 +423,17 @@
     // --- message ---
     card.append(el('textarea', {
       placeholder: s.type === 'menu' ? 'Message, e.g. Welcome to My Shop' : s.type === 'input' ? 'Question, e.g. Enter amount:' : 'Last message, e.g. Thank you!',
-      oninput: e => { s.text = e.target.value; changed(false); },
+      oninput: e => {
+        s.text = e.target.value; changed(false);
+        // keep this screen's name in every "goes to" list up to date
+        document.querySelectorAll(`#screens select.nx option[value="${s.id}"]`).forEach(o => o.textContent = screenLabel(s));
+      },
     }, s.text));
 
     // --- the basics for each type ---
     if (s.type === 'menu') {
+      if (s.options.length) card.append(el('div', { class: 'grid-row opt-row col-h' },
+        el('span', {}, 'Press'), el('span', {}, 'Option'), el('span', {}), el('span', {}, 'Goes to screen'), el('span', {})));
       s.options.forEach((o, oi) => {
         card.append(el('div', { class: 'grid-row opt-row' },
           el('input', { value: o.key, placeholder: '#', title: 'What the user types', oninput: e => { o.key = e.target.value.trim(); changed(false); } }),
