@@ -27,38 +27,27 @@
     ['>=', 'at least'], ['<=', 'at most'], ['contains', 'contains'],
   ];
 
-  const EXAMPLE = {
-    name: 'Demo Vote',
-    start: 'main',
-    screens: [
-      { id: 'main', type: 'menu', text: 'Welcome to Demo Vote', saveAs: '',
-        options: [{ key: '1', label: 'Vote', next: 'code' }, { key: '2', label: 'Results', next: 'results' }, { key: '0', label: 'Exit', next: 'bye' }] },
-      { id: 'code', type: 'input', text: 'Enter nominee code\n(eg. 1234)', saveAs: 'code', validate: 'pin', error: '',
-        rules: [{ var: 'code', op: '=', value: '1234', next: 'votes' }], next: 'bad_code' },
-      { id: 'bad_code', type: 'end', text: 'Invalid nominee code. Please dial again.' },
-      { id: 'votes', type: 'input', text: 'Nominee: Kofi Mensah\nEnter number of votes (GHS 1 each):', saveAs: 'votes', validate: 'number', error: '',
-        rules: [{ var: 'votes', op: '>', value: '100', next: 'too_many' }], next: 'confirm' },
-      { id: 'too_many', type: 'end', text: 'You can buy at most 100 votes at a time.' },
-      { id: 'confirm', type: 'menu', text: 'Confirm {{votes}} vote(s) for nominee {{code}}?', saveAs: '',
-        options: [{ key: '1', label: 'Confirm', next: 'paid' }, { key: '2', label: 'Cancel', next: 'bye' }] },
-      { id: 'paid', type: 'end', text: 'Thank you! A payment prompt for GHS {{votes}} has been sent to {{phone}}.' },
-      { id: 'results', type: 'end', text: 'Results will be announced on Friday.' },
-      { id: 'bye', type: 'end', text: 'Goodbye!' },
-    ],
-  };
+  /** A new menu: one empty start screen. */
+  function blankFlow() {
+    return { name: "", start: "main", screens: [
+      { id: "main", type: "menu", text: "", saveAs: "", options: [{ key: "1", label: "", next: "" }], rules: [], validate: "any", error: "", next: "" },
+    ] };
+  }
+  /** Menus saved by an older version that only held the built-in vote example are replaced by a blank menu. */
+  function isOldExample(f) { return f && f.name === "Demo Vote" && Array.isArray(f.screens) && f.screens.some(s => s.id === "votes"); }
 
   /* ================= model ================= */
   let flow = load();
 
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
   function load() {
-    try { const f = JSON.parse(localStorage.getItem(STORE_KEY)); if (valid(f)) return normalize(f); } catch (e) {}
-    return clone(EXAMPLE);
+    try { const f = JSON.parse(localStorage.getItem(STORE_KEY)); if (valid(f) && !isOldExample(f)) return normalize(f); } catch (e) {}
+    return blankFlow();
   }
   function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(flow)); } catch (e) {} }
   function valid(f) { return f && Array.isArray(f.screens) && f.screens.length > 0; }
   function normalize(f) {
-    f.name = f.name || 'My USSD';
+    f.name = typeof f.name === 'string' ? f.name : '';
     f.screens.forEach(s => {
       s.id = slug(s.id) || 'screen';
       s.type = ['menu', 'input', 'end'].includes(s.type) ? s.type : 'menu';
@@ -155,7 +144,7 @@
       let state = null; try { state = JSON.parse(payload.ClientState || 'null'); } catch (e) {}
       const r = step(state, String(payload.Message || '').trim(), type === 'initiation', { phone: payload.Mobile || '', network: payload.Operator || '' });
       return {
-        SessionId: payload.SessionId, Type: r.end ? 'Release' : 'Response', Message: r.text, Label: flow.name,
+        SessionId: payload.SessionId, Type: r.end ? 'Release' : 'Response', Message: r.text, Label: flow.name || 'USSD',
         ClientState: r.end ? '' : JSON.stringify(r.state), DataType: r.end ? 'display' : 'input', FieldType: 'text',
       };
     }
@@ -191,7 +180,7 @@
     const hub = gateway === 'hubtel';
     L.push('<?php');
     L.push('/*');
-    L.push(` * ${flow.name.replace(/\*\//g, '* /').replace(/\?>/g, '? >')} — ${hub ? 'Hubtel' : 'Nalo'} USSD endpoint`);
+    L.push(` * ${(flow.name || 'USSD menu').replace(/\*\//g, '* /').replace(/\?>/g, '? >')} — ${hub ? 'Hubtel' : 'Nalo'} USSD endpoint`);
     L.push(' * Generated with SAB-TECH HUB USSD Simulator (Menu Builder)');
     L.push(' * Powered by SAB-TECH HUB');
     L.push(' *');
@@ -231,7 +220,7 @@
       L.push("        'SessionId'   => $sessionId,");
       L.push("        'Type'        => $end ? 'Release' : 'Response',");
       L.push("        'Message'     => $message,");
-      L.push(`        'Label'       => ${phpStr(flow.name)},`);
+      L.push(`        'Label'       => ${phpStr(flow.name || 'USSD')},`);
       L.push("        'ClientState' => $end ? '' : json_encode(['s' => $screen, 'v' => $vars]),");
       L.push("        'DataType'    => $end ? 'display' : 'input',");
       L.push("        'FieldType'   => 'text',");
@@ -422,7 +411,7 @@
 
     // --- message ---
     card.append(el('textarea', {
-      placeholder: s.type === 'menu' ? 'Message, e.g. Welcome to My Shop' : s.type === 'input' ? 'Question, e.g. Enter amount:' : 'Last message, e.g. Thank you!',
+      placeholder: s.type === 'menu' ? 'Message shown above the options' : s.type === 'input' ? 'Question to ask' : 'Last message',
       oninput: e => {
         s.text = e.target.value; changed(false);
         // keep this screen's name in every "goes to" list up to date
@@ -437,7 +426,7 @@
       s.options.forEach((o, oi) => {
         card.append(el('div', { class: 'grid-row opt-row' },
           el('input', { value: o.key, placeholder: '#', title: 'What the user types', oninput: e => { o.key = e.target.value.trim(); changed(false); } }),
-          el('input', { value: o.label, placeholder: 'Option', oninput: e => { o.label = e.target.value; changed(false); } }),
+          el('input', { value: o.label, placeholder: 'Option text', oninput: e => { o.label = e.target.value; changed(false); } }),
           el('span', { class: 'arrow' }, '→'),
           screenSelect(o.next, v => { o.next = v; changed(false); }),
           el('button', { class: 'btn icon', title: 'Remove option', onclick: () => { s.options.splice(oi, 1); changed(true); } }, '✕')));
@@ -459,7 +448,7 @@
     more.append(el('summary', {}, n ? `More · ${n} condition${n > 1 ? 's' : ''}` : 'More'));
 
     if (s.type === 'menu') {
-      more.append(el('label', {}, 'Remember the chosen option as (e.g. choice, then use {{choice}} in a message)'),
+      more.append(el('label', {}, 'Remember the chosen option as (then show it in a message with {{name}})'),
         varInput(s.saveAs, v => { s.saveAs = v; changed(true); }, 'not saved'));
     }
     if (s.type === 'input') {
@@ -505,7 +494,7 @@
     box.append(el('datalist', { id: 'bVars' }, knownVars().map(v => el('option', { value: v }))));
     box.append(el('div', { class: 'two', style: 'margin-bottom:4px' },
       el('div', {}, el('label', { style: 'margin-top:0' }, 'Service name'),
-        el('input', { value: flow.name, oninput: e => { flow.name = e.target.value; changed(false); } }))));
+        el('input', { value: flow.name, placeholder: 'Name of your service', oninput: e => { flow.name = e.target.value; changed(false); } }))));
     flow.screens.forEach((s, i) => box.append(renderScreen(s, i)));
     box.scrollTop = scroll;
   }
@@ -527,7 +516,7 @@
       const box = $('#screens'); box.scrollTop = box.scrollHeight;
       const card = box.querySelector(`[data-id="${id}"] textarea`); if (card) card.focus();
     };
-    $('#bReset').onclick = () => { if (confirm('Replace your flow with the example? Export it first if you want to keep it.')) { flow = clone(EXAMPLE); changed(true); } };
+    $('#bReset').onclick = () => { if (confirm('Clear everything and start a new menu? Use File → Save to file first if you want to keep this one.')) { flow = blankFlow(); openMore.clear(); changed(true); } };
     $('#bExport').onclick = () => download(fileName() + '.flow.json', JSON.stringify(flow, null, 2), 'application/json');
     $('#bImport').onclick = () => $('#bFile').click();
     $('#bFile').onchange = e => {
@@ -540,7 +529,7 @@
     };
     $('#bGen').onclick = () => {
       const p = problems();
-      window.openCodeModal('Generated PHP endpoint — ' + flow.name, async g => toPhp(g), g => `${fileName()}-${g}.php`,
+      window.openCodeModal('Generated PHP endpoint' + (flow.name ? ' — ' + flow.name : ''), async g => toPhp(g), g => `${fileName()}-${g}.php`,
         p.length ? '⚠ Fix these first: ' + p.map(x => `${x[0]}: ${x[1]}`).join(' · ') : '');
     };
   }
@@ -550,6 +539,6 @@
     respond, toPhp, init, render, problems,
     get flow() { return flow; },
     set flow(f) { flow = normalize(clone(f)); save(); render(); },
-    example: () => clone(EXAMPLE),
+    blank: blankFlow,
   };
 })();

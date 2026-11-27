@@ -338,7 +338,7 @@ code{background:var(--field);border:1px solid var(--line);border-radius:4px;padd
           <div class="file-pop">
             <button class="btn" id="bExport" title="Save this menu as a .json file">Save to file</button>
             <button class="btn" id="bImport" title="Open a menu saved earlier">Open file</button>
-            <button class="btn" id="bReset" title="Replace this menu with the example">Start from example</button>
+            <button class="btn" id="bReset" title="Clear everything and start a new menu">Start over</button>
           </div>
         </details>
         <input type="file" id="bFile" accept=".json,application/json" hidden>

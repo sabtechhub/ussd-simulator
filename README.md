@@ -21,15 +21,15 @@ The page shows a phone with a dialer. Dial your short code and the simulator sen
 
 ## Menu builder
 
-Open the **Menu builder** tab to design a USSD service without writing code first. Each screen is one of:
+Open the **Menu builder** tab to build your USSD menus from scratch, without writing code first. You start with one empty screen; each screen is one of:
 
 - **Menu** — a message and numbered options; each option goes to another screen.
 - **Question** — the user types an answer, then it goes to the next screen.
 - **End** — a last message; the session closes.
 
-Press **▶ Test on phone** to try it, and **Get PHP code** for a ready Hubtel or Nalo endpoint written with plain `switch` statements and `if` conditions, so you can keep editing it by hand (for example to save votes or trigger payments).
+Press **▶ Test on phone** to try it, and **Get PHP code** for a ready Hubtel or Nalo endpoint written with plain `switch` statements and `if` conditions, so you can keep editing it by hand with your own logic.
 
-Optional extras sit behind **More** on each screen: remember an answer (then show it with `{{name}}`; `{{phone}}` and `{{network}}` are always available), only accept a number / 4-digit PIN / phone number, and conditions such as *if `amount` greater than `100` → `too_many`*. Your menu is kept in your browser; **File → Save to file / Open file** keeps a copy as a `.json` file.
+Optional extras sit behind **More** on each screen: remember an answer (then show it with `{{name}}`; `{{phone}}` and `{{network}}` are always available), only accept a number / 4-digit PIN / phone number, and conditions that send the user to a different screen depending on the answer. Your menu is kept in your browser; **File → Save to file / Open file** keeps a copy as a `.json` file.
 
 ## Run it
 
