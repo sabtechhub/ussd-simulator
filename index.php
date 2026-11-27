@@ -6,7 +6,7 @@
  */
 const SAMPLE_FILES = ['hubtel' => 'sample-hubtel.php', 'nalo' => 'sample-nalo.php'];
 const GITHUB_URL = 'https://github.com/sabtechhub/ussd-simulator';
-const APP_URL = 'https://github.com/sabtechhub/ussd-simulator/releases/latest';   // free Windows and Mac app
+const APP_URL = 'https://sabtechhub.com/ussd';   // free Windows and Mac app (the site counts each download)
 
 /*
  * Own computer or public website?

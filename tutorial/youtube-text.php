@@ -7,9 +7,10 @@
 if (!$dir || !$ffprobe || !$out) exit("usage: php youtube-text.php <videos dir> <ffprobe> <out dir>\n");
 @mkdir($out, 0777, true);
 
-$series = 'How to Build a USSD Menu';
+$series = 'How to Create a USSD Application';
 $site = 'https://sabtechhub.com/ussd-simulator/';
 $github = 'https://github.com/sabtechhub/ussd-simulator';
+$app = 'https://sabtechhub.com/ussd';
 $tags = 'USSD, short code, how to build USSD, USSD menu, USSD code, USSD Ghana, Hubtel USSD, Nalo USSD, Arkesel, Orchard, USSD simulator, USSD tutorial, no code, PHP, SAB-TECH HUB';
 
 function ts(float $s): string { $s = (int)floor($s); return sprintf('%d:%02d', intdiv($s, 60), $s % 60) . ''; }
@@ -41,20 +42,20 @@ foreach (glob("$dir/*.mp4") as $mp4) {
     $mins = round(((float)($info['format']['duration'] ?? 0)) / 60, 1);
 
     $bonus = $n === 'bonus';
-    $ytTitle = $bonus ? "$series (Bonus): $title | SAB-TECH HUB" : "$series (Part $n of 12): $title | SAB-TECH HUB";
-    if (mb_strlen($ytTitle) > 100) $ytTitle = "$series #$n: $title";
+    $ytTitle = "$series for Beginners, No Coding (" . ($bonus ? 'Bonus' : "Part $n") . "): $title";
+    if (mb_strlen($ytTitle) > 100) $ytTitle = str_replace('Use Case: ', '', $ytTitle);   // YouTube allows 100 characters
     $desc = "$about\n\n"
         . ($bonus ? 'Bonus video in' : "Part $n of 12 in") . " our free beginner course: $series (also called a short code), with the free SAB-TECH HUB USSD Simulator. "
         . "Build your menu on the Map with no code, test it on a pretend phone, then copy the code onto your server and connect Hubtel, Nalo, Orchard, Arkesel or any USSD provider.\n\n"
-        . "Try the simulator free: $site\nDownload it (free, open source): $github\n\n"
+        . "Try the simulator free: $site\nGet the free app for Windows and Mac: $app\nSource code (open source): $github\n\n"
         . "Chapters:\n" . implode("\n", array_map(fn($c) => ts($c[0]) . ' ' . $c[1], $chap)) . "\n\n"
         . "#USSD #ShortCode #SABTECHHUB";
-    $txt = "FILE: $name.mp4  ($mins min)\n\nTITLE:\n$ytTitle\n\nDESCRIPTION:\n$desc\n\nTAGS:\n$tags\n\nPLAYLIST: $series - Free Course (SAB-TECH HUB)\n";
+    $txt = "FILE: $name.mp4  ($mins min)\n\nTITLE:\n$ytTitle\n\nDESCRIPTION:\n$desc\n\nTAGS:\n$tags\n\nPLAYLIST: $series for Beginners, No Coding (Free Course)\n";
     file_put_contents("$out/$name.txt", $txt);
     $all[] = $txt;
 }
-$head = "PLAYLIST TITLE:\n$series - Free Course (SAB-TECH HUB)\n\nPLAYLIST DESCRIPTION:\n"
-    . "Learn how to build a USSD menu (short code) from scratch, with no code. 12 simple videos for complete beginners: "
+$head = "PLAYLIST TITLE:\n$series for Beginners, No Coding (Free Course)\n\nPLAYLIST DESCRIPTION:\n"
+    . "Learn how to create a USSD application (short code) from scratch, with no coding. 12 simple videos for complete beginners: "
     . "dial your first code, build menus on the Map, ask questions, use conditions and prices, and put your menu live with Hubtel, Nalo, Orchard or Arkesel. "
     . "Free simulator: $site\n\n" . str_repeat('=', 60) . "\n\n";
 file_put_contents("$out/ALL-VIDEOS.txt", $head . implode("\n" . str_repeat('=', 60) . "\n\n", $all));
